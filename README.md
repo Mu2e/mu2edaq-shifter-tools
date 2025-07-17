@@ -26,5 +26,8 @@ Notes:
 * `kill_daq <all>` Kills the ots instance associated with the current environment, or possibly kills all running ots environments
 
 Do we need resource management? What about ports? How do we make sure that two instances of the DAQ are not trying to use the same DTC? How do we automatically offset ports for ots/artdaq.
-* ResourceManager reads a static configuration of availble resources (e.g. DTCs), and manages whether they have been claimed by an active partition
+* ResourceManager reads a static configuration of availble resources (e.g. DTCs), and manages whether they have been claimed by an active partition (could be Node.js, need claim/release/status/transaction_{start,end})
 * Must implement ResourceSupervisor that taks to the ResourceManager to reserve fungible resources (e.g. DTCs).
+* If any failure occurs in a transaction, respond with failure message until the transaction ends. This should put the ots state machines in the "failed" state
+
+TMUX: https://stackoverflow.com/questions/8537149/how-to-start-tmux-with-several-windows-in-different-directories
