@@ -24,6 +24,7 @@ Notes:
 "resource_manager_port": 1973
 ```
 * `kill_daq [-z parition=0] [--all]` Kills the ots instances associated with the given partition, or possibly kills all running ots environments
+* `daq_status` List all running paritions, their environments, and optionally query 1-line OTS status from each
 
 Do we need resource management? What about ports? How do we make sure that two instances of the DAQ are not trying to use the same DTC? How do we automatically offset ports for ots/artdaq.
 * ResourceManager reads a static configuration of availble resources (e.g. DTCs), and manages whether they have been claimed by an active partition (could be Node.js, need claim/release/status/transaction_{start,end})
