@@ -15,7 +15,16 @@ Scripts and utilities for operating the Mu2e DAQ system
        "setup_cmd": "/home/mu2edaq/tracker/test_rel_v9_00_00/setup_ots.sh tracker",
        "port_offset": 10
     },
-    "trigger": "..."
+    "trigger": {
+       "test_rel_path": "/home/mu2edaq/test_rel_v9_00_00"
+       "setup_cmd": "/home/mu2edaq/test_rel_v9_00_00/setup_ots.sh trigger",
+       "port_offset": 20
+    },
+    "calorimeter": {
+       "test_rel_path": "/home/mu2edaq/test_rel_v9_00_00"
+       "setup_cmd": "/home/mu2edaq/test_rel_v9_00_00/setup_ots.sh calorimeter",
+       "port_offset": 30
+    },
   },
   "base_release": "/mu2e/releases/v9_00_00",
   "active_environments": [ "tracker", "trigger" ],
