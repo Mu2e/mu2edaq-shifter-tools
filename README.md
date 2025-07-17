@@ -11,7 +11,8 @@ Notes:
        "test_rel_path": "/home/mu2edaq/tracker/test_rel_v9_00_00"
        "setup_cmd": "/home/mu2edaq/tracker/test_rel_v9_00_00/setup_ots.sh tracker"
     },
-    "trigger": ...
-  }
+    "trigger": "..."
+  },
+  "base_release": "/mu2e/releases/v9_00_00"
 ```
 * `kill_daq <all>` Kills the ots instance associated with the current environment, or possibly kills all running ots environments
