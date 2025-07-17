@@ -13,6 +13,7 @@ Notes:
     },
     "trigger": "..."
   },
-  "base_release": "/mu2e/releases/v9_00_00"
+  "base_release": "/mu2e/releases/v9_00_00",
+  "active_environments": [ "tracker", "trigger" ]
 ```
 * `kill_daq <all>` Kills the ots instance associated with the current environment, or possibly kills all running ots environments
