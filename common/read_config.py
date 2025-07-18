@@ -3,6 +3,7 @@
 import yaml
 import click
 import pathlib
+from pprint import pprint
 
 def load_config(input_file):
     with open(input_file) as stream:
@@ -16,7 +17,7 @@ def load_config(input_file):
 @click.option('--input_file', '-f', help="Config file to read", type=click.Path(exists=True), default="~/daq-shifter-tools/daq-operations.yaml")
 @click.option('--partition', '-z', help="Partition to load", default="partition_0")
 @click.option("--environment", "-e", help="Environment to load", default=None, type=str)
-@click.argument("command_verb", type=click.Choice(["directory", "setup"], case_sensitive=False))
+@click.argument("command_verb", type=click.Choice(["directory", "setup", "print"], case_sensitive=False))
 def read_config(input_file, partition, environment, command_verb):
     config = load_config(input_file)
     if partition not in config['partitions']:
@@ -35,6 +36,8 @@ def read_config(input_file, partition, environment, command_verb):
         print(environment_config['test_rel_path'])
     elif command_verb == "setup":
         print(environment_config['setup_cmd'])
+    elif command_verb == "print":
+        pprint(config)
         
 
 if __name__ == '__main__':
