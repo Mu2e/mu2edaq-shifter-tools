@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 env_opts_var=`basename $0 | sed 's/\.sh$//' | tr 'a-z-' 'A-Z_'`_OPTS
 USAGE="\
    usage: `basename $0` [-z partition] [-e environment]
@@ -45,8 +47,8 @@ eval "set -- $args \"\$@\""; unset args aa
 
 test -n "${do_help-}" -o $# -ge 2 && echo "$USAGE" && exit
 
-dir=`common/read_config.py --input_file $config_file --partition $partition --environment $environment directory`
+dir=`SCRIPT_DIR/common/read_config.py --input_file $config_file --partition $partition --environment $environment directory`
 if [ -d $dir ]; then
   cd $dir
-  source `common/read_config.py --input_file $config_file --partition $partition --environment $environment setup`
+  source `SCRIPT_DIR/common/read_config.py --input_file $config_file --partition $partition --environment $environment setup`
 fi

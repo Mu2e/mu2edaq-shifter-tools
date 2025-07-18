@@ -1,0 +1,56 @@
+#!/bin/bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+env_opts_var=`basename $0 | sed 's/\.sh$//' | tr 'a-z-' 'A-Z_'`_OPTS
+USAGE="\
+   usage: `basename $0` [-z partition]
+examples: `basename $0` -z partition_0
+
+-c,--config      Config file to read
+-z,--partition   Partition to set up
+"
+ 
+config_file="~/daq-shifter-tools/daq-operations.yaml"
+partition="partition_0"
+
+# Process script arguments and options
+eval env_opts=\${$env_opts_var-} # can be args too
+
+eval "set -- $env_opts \"\$@\""
+op1chr='rest=`expr "$op" : "[^-]\(.*\)"`   && set -- "-$rest" "$@"'
+op1arg='rest=`expr "$op" : "[^-]\(.*\)"`   && set --  "$rest" "$@"'
+reqarg="$op1arg;"'test -z "${1+1}" &&echo opt -$op requires arg. &&echo "$USAGE" &&exit'
+args= do_help=
+while [ -n "${1-}" ];do
+    if expr "x${1-}" : 'x-' >/dev/null;then
+        op=`expr "x$1" : 'x-\(.*\)'`; shift   # done with $1
+        leq=`expr "x$op" : 'x-[^=]*\(=\)'` lev=`expr "x$op" : 'x-[^=]*=\(.*\)'`
+        test -n "$leq"&&eval "set -- \"\$lev\" \"\$@\""&&op=`expr "x$op" : 'x\([^=]*\)'`
+        case "$op" in
+            \?*|h*)       eval $op1chr; do_help=1;;
+            c*)           eval $reqarg; config_file=$1; shift;;
+            z*)           eval $reqarg; partition=$1; shift;;
+            -config)      eval $reqarg; config_file=$1; shift;;
+            -partition)   eval $reqarg; partition=$1; shift;;
+            *)          echo "Unknown option -$op"; do_help=1;;
+        esac
+    else
+        aa=`echo "$1" | sed -e"s/'/'\"'\"'/g"` args="$args '$aa'"; shift
+    fi
+done
+eval "set -- $args \"\$@\""; unset args aa
+
+test -n "${do_help-}" -o $# -ge 2 && echo "$USAGE" && exit
+
+set -x
+
+tmux new-session -s daq-$partition -d
+ii=1
+
+active_environments=`$SCRIPT_DIR/common/read_config.py --partition $partition --input_file $config_file active-envs`
+
+for env in $active_environments;do
+  tmux new-window -t daq-$partition:$ii -n daq-$partition-$env "source $SCRIPT_DIR/setup_online -z $partition -e $env;ots; exec bash"
+  ii=$(( $ii + 1 ))
+done
