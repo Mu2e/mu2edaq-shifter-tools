@@ -33,6 +33,7 @@ while [ -n "${1-}" ];do
             z*)           eval $reqarg; partition=$1; shift;;
             -config)      eval $reqarg; config_file=$1; shift;;
             -partition)   eval $reqarg; partition=$1; shift;;
+            -debug) eval op1arg; set -x;;
             *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -43,12 +44,10 @@ eval "set -- $args \"\$@\""; unset args aa
 
 test -n "${do_help-}" -o $# -ge 2 && echo "$USAGE" && exit
 
-set -x
-
 tmux new-session -s daq-$partition -d
 ii=1
 
-active_environments=`$SCRIPT_DIR/common/read_config.py --partition $partition --input_file $config_file active-envs`
+active_environments=`$SCRIPT_DIR/common/read_config.py --partition $partition --config $config_file active-envs`
 
 for env in $active_environments;do
   tmux new-window -t daq-$partition:$ii -n daq-$partition-$env "source $SCRIPT_DIR/setup_online -z $partition -e $env;ots; exec bash"

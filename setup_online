@@ -37,6 +37,7 @@ while [ -n "${1-}" ];do
             -config)      eval $reqarg; config_file=$1; shift;;
             -partition)   eval $reqarg; partition=$1; shift;;
             -environment) eval $reqarg; environment=$1; shift;;
+            -debug) eval op1arg; set -x;;
             *)          echo "Unknown option -$op"; do_help=1;;
         esac
     else
@@ -47,8 +48,8 @@ eval "set -- $args \"\$@\""; unset args aa
 
 test -n "${do_help-}" -o $# -ge 2 && echo "$USAGE" && exit
 
-dir=`SCRIPT_DIR/common/read_config.py --input_file $config_file --partition $partition --environment $environment directory`
+dir=`SCRIPT_DIR/common/read_config.py --config $config_file --partition $partition --environment $environment directory`
 if [ -d $dir ]; then
   cd $dir
-  source `SCRIPT_DIR/common/read_config.py --input_file $config_file --partition $partition --environment $environment setup`
+  source `SCRIPT_DIR/common/read_config.py --config $config_file --partition $partition --environment $environment setup`
 fi

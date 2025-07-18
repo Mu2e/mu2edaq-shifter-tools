@@ -14,16 +14,16 @@ def load_config(input_file):
             print(exception)
 
 @click.command()
-@click.option('--input_file', '-f', help="Config file to read", type=click.Path(exists=True), default="~/daq-shifter-tools/daq-operations.yaml")
+@click.option('--config', '-c', help="Config file to read", type=click.Path(exists=True), default="~/daq-shifter-tools/daq-operations.yaml")
 @click.option('--partition', '-z', help="Partition to load", default="partition_0")
 @click.option("--environment", "-e", help="Environment to load", default=None, type=str)
 @click.argument("command_verb", type=str, default="print")
-def read_config(input_file, partition, environment, command_verb):
-    config = load_config(input_file)
-    if partition not in config['partitions']:
+def read_config(config, partition, environment, command_verb):
+    config_obj = load_config(config)
+    if partition not in config_obj['partitions']:
         sys.stderr.write(f"ERROR: Partition {partition} not found!")
         sys.exit(1)
-    partition_config = config['partitions'][partition]
+    partition_config = config_obj['partitions'][partition]
 
     if environment != None and environment not in partition_config['environments']:
         sys.stderr.write(f"ERROR: Environment {environment} not found in partition {partition}!")
@@ -37,11 +37,16 @@ def read_config(input_file, partition, environment, command_verb):
     elif command_verb.lower() == "setup":
         print(environment_config['setup_cmd'])
     elif command_verb.lower() == "print":
-        pprint(config)
+        pprint(config_obj)
     elif command_verb.lower() == "active-envs":
         output_str=""
         for env in partition_config['active_environments']:
             output_str += env + " "
+        print(output_str)
+    elif command_verb.lower() == "partitions":
+        output_str=""
+        for partition in config_obj['partitions']:
+            output_str += partition + " "
         print(output_str)
     else:
         sys.stderr.write(f"ERROR: Unrecognized command {command_verb}!")
