@@ -36,6 +36,7 @@ Scripts and utilities for operating the Mu2e DAQ system
 * `kill_daq [-z parition=0] [--all]` Kills the ots instances associated with the given partition, or possibly kills all running ots environments
 * `daq_status` List all running paritions, their environments, and optionally query 1-line OTS status from each\
 * `send_run_control_command [-z partition] [env] <cmd>` Sends a UDP state transition message to the targeted OTS instance
+* `create_environment [-z partition] [env]` Read the configuration and call `mu2e-quick-spack-start.sh` as appropriate to make the environment test release 
 * SSH Tunnel utilities
 
 ## Resource Management
