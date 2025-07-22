@@ -48,6 +48,8 @@ def read_config(config, partition, environment, command_verb):
         for partition in config_obj['partitions']:
             output_str += partition + " "
         print(output_str)
+    elif command_verb.lower() == "base-release":
+        print(partition_config['base_release'])
     else:
         sys.stderr.write(f"ERROR: Unrecognized command {command_verb}!")
         sys.exit(3)
