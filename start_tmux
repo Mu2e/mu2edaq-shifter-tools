@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Script to pop open multiple tmux windows for DAQ environments
+# Create/Load a new evnironment set in window
+
+#
+# The path to the script directory
+SCRIPT_DIR="~/daq-shifter-tools/scripts"
+
+# Start the main tmux session for DAQ
+
+# Start with a configuration file and partition that we want to start
+#
+# We split the window into 4-Quadrants:
+# |----------------------------------------------|
+# | Main                 | DAQ Env. Monitor      |
+# |                      |                       |
+# |----------------------|-----------------------|
+# | DAQ Environment Calo | DAQ Environment Trk   |
+# |                      |                       |
+# |----------------------|-----------------------|
+#
+#
+#
+# Create sessions for the main DAQ, Calo, Trak, CRV, and Monitoring
+tmux new-session -s daq -d
+#tmux new-session -s daq-calo -d
+#tmux new-session -s daq-trk -d
+#tmux new-session -s daq-mon -d
+#tmux new-session -s daq-crv -d
+#
+# Now rename the different windows
+tmux rename-window -t daq:0 'daq-main'
+#tmux rename-window -t daq-calo:0 'daq-calo'
+#tmux rename-window -t daq-trk:0 'daq-trk'
+#tmux rename-window -t daq-mon:0 'daq-mon'
+#tmux rename-window -t daq-crv:0 'daq-crv'
+#tmux select-window -t daq-stm:0 '
+# 
+# Now we split the windows into 4 quadrants
+tmux split-window -t daq:0 -v 
+tmux split-window -t daq:0 -h
+#tmux split-window -t daq:0 -v
+
+tmux new-window -n build
+tmux split-window -t build -h
+
+#
+# Now run the environment setup script in each of the windows
+#tmux send-keys -t daq:0      'source $SCRIPT_DIR/daq-env.sh' C-m
+#tmux send-keys -t daq-calo:0 'source $SCRIPT_DIR/daq-calo-env.sh' C-m
+#tmux send-keys -t daq-trk:0  'source $SCRIPT_DIR/daq-trk-env.sh' C-m
+#tmux send-keys -t daq-mon:0  'source $SCRIPT_DIR/daq-mon-env.sh' C-m
+#tmux send-keys -t daq-crv:0  'source $SCRIPT_DIR/daq-crv-env.sh' C-m
+
