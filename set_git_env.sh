@@ -17,3 +17,4 @@ privkey_path="~/.ssh/id_${KRB5_PRINCIPAL%%@*}_rsa"
 export GIT_SSH_COMMAND="ssh -i $privkey_path"
 echo "Setting Git SSH Command:"
 echo $GIT_SSH_COMMAND
+echo "COMPLETE"
