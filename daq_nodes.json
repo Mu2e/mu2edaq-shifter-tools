@@ -1,0 +1,48 @@
+{
+    "daq": [
+        "mu2edaq01.fnal.gov",
+        "mu2edaq02.fnal.gov",
+        "mu2edaq03.fnal.gov",
+        "mu2edaq04.fnal.gov",
+        "mu2edaq05.fnal.gov",
+        "mu2edaq06.fnal.gov",
+        "mu2edaq07.fnal.gov",
+        "mu2edaq08.fnal.gov",
+        "mu2edaq09.fnal.gov",
+        "mu2edaq10.fnal.gov",
+        "mu2edaq11.fnal.gov",
+        "mu2edaq12.fnal.gov",
+        "mu2edaq13.fnal.gov"
+    ],
+    "trk": [
+        "mu2etrk01.fnal.gov",
+        "mu2etrk02.fnal.gov",
+        "mu2etrk03.fnal.gov",
+        "mu2etrk04.fnal.gov",
+        "mu2etrk05.fnal.gov",
+        "mu2etrk06.fnal.gov",
+        "mu2etrk07.fnal.gov",
+        "mu2etrk08.fnal.gov",
+        "mu2etrk09.fnal.gov"
+    ],
+    "crv": [
+        "mu2ecrv01.fnal.gov",
+        "mu2ecrv02.fnal.gov",
+        "mu2ecrv03.fnal.gov",
+        "mu2ecrv04.fnal.gov",
+        "mu2ecrv05.fnal.gov",
+        "mu2ecrv06.fnal.gov",
+        "mu2ecrv07.fnal.gov",
+        "mu2ecrv08.fnal.gov"
+    ],
+    "calo": [
+        "mu2ecalo01.fnal.gov",
+        "mu2ecalo02.fnal.gov",
+        "mu2ecalo03.fnal.gov",
+        "mu2ecalo04.fnal.gov",
+        "mu2ecalo05.fnal.gov",
+        "mu2ecalo06.fnal.gov",
+        "mu2ecalo07.fnal.gov",
+        "mu2ecalo08.fnal.gov"
+    ]
+}
