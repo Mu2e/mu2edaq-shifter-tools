@@ -1,0 +1,17 @@
+[
+    {
+        "hostname": "mu2edaq-gateway.fnal.gov",
+        "username": "mu2edaq",
+        "port": 3201
+    },
+    {
+        "hostname": "mu2egateway01.fnal.gov",
+        "username": "mu2edaq",
+        "port": 3203
+    },
+    {
+        "hostname": "mu2egateway02.fnal.gov",
+        "username": "mu2edaq",
+        "port": 3203
+    }
+]
