@@ -1,0 +1,11 @@
+{
+    "principals": [
+        "mu2edcs/mu2edaq/mu2e.fnal.gov",
+        "mu2edaq/mu2edaq/mu2e.fnal.gov",
+        "mu2eraw/mu2edaq/mu2e.fnal.gov",
+        "mu2edqm/mu2edaq/mu2e.fnal.gov",
+        "mu2eshift/mu2edaq/mu2e.fnal.gov",
+        "mu2e-controlroom/mu2edaq/mu2e.fnal.gov",
+        "mu2e-teststand/mu2edaq/mu2e.fnal.gov"
+    ]
+}
