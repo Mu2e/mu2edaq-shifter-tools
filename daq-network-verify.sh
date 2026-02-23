@@ -18,7 +18,7 @@ done
 arp -a | sort > arp_table.txt
 
 # Now we can dump the routing table
-route -n > routing_table.txt    
+route -n > routing_table.txt
 
 # We want to filter this and also add the network name to the output
 cat arp_table.txt | while read -r line; do
