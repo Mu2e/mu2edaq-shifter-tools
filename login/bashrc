@@ -1,0 +1,63 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+export PAGER=less
+export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
+
+alias ll='ls -l --color=auto'
+alias l='ll'
+alias rgrep='grep -R'
+alias ccgrep="grep -R --include='*.cc'"
+alias hgrep="grep -R --include='*.h'"
+alias srcgrep="grep -R --include='*.cc' --include='*.h'"
+alias less='less -S' #no word wrap
+alias sshx='ssh-selector -c ~/config/mu2e_daq.yaml'
+
+reset () 
+{ 
+#    printf '\e[3J';
+    /usr/bin/reset;
+    printf '\e[3J'
+}
+
+envreset ()
+{
+    exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login 
+}
+# set prompt
+PS1="<`hostname`> "; export PS1
+export PS1='$(whoami)@$(hostname):$(pwd):'
+
+
+kinitCache=`klist 2>&1  | grep cache`
+UGROUP_ID=51937 #mu2eshift
+# echo "kinitCache $kinitCache"
+# if the klist cache is based only on group account of mu2e* --> UGROUP_ID is the suffix, and people inadvertently share kerberos certificates
+if [[ "x$kinitCache" == "xTicket cache: FILE:/tmp/krb5cc_${UGROUP_ID}" ]]; then
+    kdestroy >/dev/null 2>&1
+    randomSequence=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
+    export KRB5CCNAME=/tmp/krb5cc_${UGROUP_ID}_${randomSequence}
+    [[ $- == *i* ]] && echo ".bashrc: klist cache was associated with group account, changing for user - now ${KRB5CCNAME}; any kerberos tickets were destroyed"
+fi
+if [[ "x$kinitCache" == "xklist: No credentials cache found (filename: /tmp/krb5cc_55438)" ]]; then
+    kdestroy >/dev/null 2>&1
+    randomSequence=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo ''`
+    export KRB5CCNAME=/tmp/krb5cc_${UGROUP_ID}_${randomSequence}
+    [[ $- == *i* ]] && echo ".bashrc: klist cache was associated with group account, changing for user - now ${KRB5CCNAME}; any kerberos tickets were destroyed"
+fi
+. "$HOME/.local/bin/env"
+
+ejc(){
+    set -o vi	
+    export PS1="${PS1} "
+    bind -s '"\C-h": "~"'
+    alias git='git -c user.name="edcallaghan" -c user.email="ejc3@lbl.gov"'
+    alias vim='vim -u ~mu2etrk/.ejc/vimrc'
+    export EDITOR='vim' visual='vim'
+    export ISEJC='TRUE'
+    unalias less
+}
