@@ -13,6 +13,9 @@
 #
 #     mu2edaq/mu2edaq/mu2e.fnal.gov@FNAL.GOV   (from mu2edaq.keytab)
 #
+# It then runs `kinit -kt` to actually obtain a Kerberos ticket for
+# that principal from its keytab.
+#
 # On success it exports:
 #     KRB5_PRINCIPAL  - the principal string
 #     KRB5_KEYTAB     - path to the keytab the principal came from
@@ -63,12 +66,20 @@ _gkdp_main() {
     export KRB5_PRINCIPAL="$principal"
     export KRB5_KEYTAB="$keytab"
 
-    [ -f "$KRB5_KEYTAB" ] || \
-        echo "get_krb_daq_principle.sh: warning: keytab not found: $KRB5_KEYTAB" >&2
-
     echo "DAQ Kerberos principal: $KRB5_PRINCIPAL"
     echo "Using keytab:           $KRB5_KEYTAB"
+
+    if [ -f "$KRB5_KEYTAB" ]; then
+        # Obtain the actual ticket from the keytab for this principal.
+        kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL"
+    else
+        echo "get_krb_daq_principle.sh: warning: keytab not found, cannot kinit: $KRB5_KEYTAB" >&2
+        return 1
+    fi
 }
 
 _gkdp_main "$@"
+_gkdp_rc=$?
 unset -f _gkdp_main
+# Propagate the status whether we were sourced (return) or run (exit).
+return $_gkdp_rc 2>/dev/null || exit $_gkdp_rc
