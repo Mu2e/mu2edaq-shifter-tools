@@ -5,31 +5,47 @@ if [ -f /etc/bashrc ]; then
         . /etc/bashrc
 fi
 
-export PAGER=less
-export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
-
 # Source shell aliases
 if [ -f ~/.aliases ]; then
         . ~/.aliases
 fi
+#
+# Set up the default pager to be less, and set the number 
+# of processors available to the system.
+export PAGER=less
+export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
 
+#############################
+# Define some useful functions
+
+# Reset the terminal and clear the scrollback buffer
 reset () 
 { 
-#    printf '\e[3J';
     /usr/bin/reset;
     printf '\e[3J'
 }
 
+# Fully reset the environment and start a new login shell
 envreset ()
 {
     exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login 
 }
+
+#############################################
+# Set the prompt to show user, host, and current directory
+#
 # set prompt: [<user>@<host>:/<dir>]:
 # \u short user, \h short hostname (to first dot), \W basename of cwd.
 # user@host in blue, dir in green; \[..\] wrap the colors so bash
 # computes the prompt width correctly.
 export PS1='[\[\e[34m\]\u@\h\[\e[0m\]:/\[\e[32m\]\W\[\e[0m\]]: '
 
+###############
+# This is a hack to avoid sharing kerberos tickets between users on the same 
+# machine.  If the klist cache is based only on group account of mu2e* --> 
+# UGROUP_ID is the suffix, and people inadvertently share kerberos 
+# certificates.  This code will destroy any existing kerberos tickets and 
+# create a new cache for the user.
 
 kinitCache=`klist 2>&1  | grep cache`
 UGROUP_ID=51937 #mu2eshift
@@ -49,6 +65,10 @@ if [[ "x$kinitCache" == "xklist: No credentials cache found (filename: /tmp/krb5
 fi
 . "$HOME/.local/bin/env"
 
+#
+# This is a user specific bash function that is being defined
+# to setup Ed Callaghan's environment for mu2e work.  It is not sourced by 
+# default, but can be called by typing "ejc" at the command prompt.
 ejc(){
     set -o vi	
     export PS1="${PS1} "
