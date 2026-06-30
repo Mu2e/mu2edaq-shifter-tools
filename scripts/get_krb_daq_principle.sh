@@ -66,16 +66,33 @@ _gkdp_main() {
     export KRB5_PRINCIPAL="$principal"
     export KRB5_KEYTAB="$keytab"
 
-    echo "DAQ Kerberos principal: $KRB5_PRINCIPAL"
-    echo "Using keytab:           $KRB5_KEYTAB"
+    if [ -n "$VERBOSE" ]; then
+        echo "DAQ Kerberos principal: $KRB5_PRINCIPAL"
+        echo "Using keytab:           $KRB5_KEYTAB"
+    fi
 
+    local rc
     if [ -f "$KRB5_KEYTAB" ]; then
         # Obtain the actual ticket from the keytab for this principal.
-        kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL"
+        if [ -n "$VERBOSE" ]; then
+            kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL"
+        else
+            kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL" 2>/dev/null
+        fi
+        rc=$?
     else
-        echo "get_krb_daq_principle.sh: warning: keytab not found, cannot kinit: $KRB5_KEYTAB" >&2
-        return 1
+        [ -n "$VERBOSE" ] && \
+            echo "get_krb_daq_principle.sh: warning: keytab not found, cannot kinit: $KRB5_KEYTAB" >&2
+        rc=1
     fi
+
+    # "<label>: " then Pass (green) / Fail (red).
+    if [ "$rc" -eq 0 ]; then
+        printf '%s: \033[32mPass\033[0m\n' "Configuring Kerberos Ticket"
+    else
+        printf '%s: \033[31mFail\033[0m\n' "Configuring Kerberos Ticket"
+    fi
+    return $rc
 }
 
 _gkdp_main "$@"
