@@ -13,5 +13,14 @@ export PATH
 
 . "$HOME/.local/bin/env"
 
-# Destroy any kerberos tickets to only use the group keytab
+# Capture the Kerberos principal from the ticket we logged in with,
+# which sets KRB5_PRINCIPAL.
+source "$HOME/bin/get_krb_principal.sh"
+
+# Use that principal to configure the git/github environment
+# (user.name/email, GIT_SSH_COMMAND -> id_<user>_rsa, ssh-add).
+source "$HOME/bin/set_git_env.sh"
+
+# Only now that the git/github environment is fully set up do we
+# destroy the kerberos ticket, so we fall back to the group keytab.
 kdestroy

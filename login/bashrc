@@ -24,9 +24,11 @@ envreset ()
 {
     exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login 
 }
-# set prompt
-PS1="<`hostname`> "; export PS1
-export PS1='$(whoami)@$(hostname):$(pwd):'
+# set prompt: [<user>@<host>:/<dir>]:
+# \u short user, \h short hostname (to first dot), \W basename of cwd.
+# user@host in blue, dir in green; \[..\] wrap the colors so bash
+# computes the prompt width correctly.
+export PS1='[\[\e[34m\]\u@\h\[\e[0m\]:/\[\e[32m\]\W\[\e[0m\]]: '
 
 
 kinitCache=`klist 2>&1  | grep cache`
