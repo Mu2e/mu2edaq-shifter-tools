@@ -8,14 +8,10 @@ fi
 export PAGER=less
 export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
 
-alias ll='ls -l --color=auto'
-alias l='ll'
-alias rgrep='grep -R'
-alias ccgrep="grep -R --include='*.cc'"
-alias hgrep="grep -R --include='*.h'"
-alias srcgrep="grep -R --include='*.cc' --include='*.h'"
-alias less='less -S' #no word wrap
-alias sshx='ssh-selector -c ~/config/mu2e_daq.yaml'
+# Source shell aliases
+if [ -f ~/.aliases ]; then
+        . ~/.aliases
+fi
 
 reset () 
 { 
