@@ -8,14 +8,10 @@ fi
 export PAGER=less
 export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
 
-alias ll='ls -l --color=auto'
-alias l='ll'
-alias rgrep='grep -R'
-alias ccgrep="grep -R --include='*.cc'"
-alias hgrep="grep -R --include='*.h'"
-alias srcgrep="grep -R --include='*.cc' --include='*.h'"
-alias less='less -S' #no word wrap
-alias sshx='ssh-selector -c ~/config/mu2e_daq.yaml'
+# Source shell aliases
+if [ -f ~/.aliases ]; then
+        . ~/.aliases
+fi
 
 reset () 
 { 
@@ -28,9 +24,11 @@ envreset ()
 {
     exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login 
 }
-# set prompt
-PS1="<`hostname`> "; export PS1
-export PS1='$(whoami)@$(hostname):$(pwd):'
+# set prompt: [<user>@<host>:/<dir>]:
+# \u short user, \h short hostname (to first dot), \W basename of cwd.
+# user@host in blue, dir in green; \[..\] wrap the colors so bash
+# computes the prompt width correctly.
+export PS1='[\[\e[34m\]\u@\h\[\e[0m\]:/\[\e[32m\]\W\[\e[0m\]]: '
 
 
 kinitCache=`klist 2>&1  | grep cache`
