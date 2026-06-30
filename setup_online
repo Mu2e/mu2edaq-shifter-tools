@@ -13,9 +13,9 @@ examples: `basename $0` -z partition_0 -e tracker
 "
 
 # First retrieve the users krb5 credentials and set up the environment for kerb access
-source get_krb_principal.sh
+source $SCRIPT_DIR/scripts/get_krb_principal.sh
 # Now setup the GitHub Evironment keyed off the kerberous id
-source setup_git_env.sh
+source $SCRIPT_DIR/scripts/set_git_env.sh
 # At this point we should be able to access GitHub
 
 #
