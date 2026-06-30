@@ -24,3 +24,7 @@ source "$HOME/bin/set_git_env.sh"
 # Only now that the git/github environment is fully set up do we
 # destroy the kerberos ticket, so we fall back to the group keytab.
 kdestroy
+
+# With the login ticket gone, obtain a fresh ticket for the current
+# DAQ group account from its deployed keytab (kinit via the script).
+source "$HOME/bin/get_krb_daq_principle.sh"
