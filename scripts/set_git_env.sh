@@ -25,5 +25,12 @@ echo "--> Ensure that $privkey_path exists and is accessible <---"
 # (during a non-interactive login there is nowhere to type it), and
 # only when an ssh-agent is available to add the key to.
 if [ -t 0 ] && [ -n "$SSH_AUTH_SOCK" ]; then
-    ssh-add "$privkey_path"
+    # Skip if this key's fingerprint is already loaded in the agent,
+    # so we don't prompt for the passphrase a second time.
+    key_fp=$(ssh-keygen -lf "$privkey_path" 2>/dev/null | awk '{print $2}')
+    if [ -n "$key_fp" ] && ssh-add -l 2>/dev/null | grep -q -- "$key_fp"; then
+        echo "Key already loaded in ssh-agent, skipping ssh-add."
+    else
+        ssh-add "$privkey_path"
+    fi
 fi
