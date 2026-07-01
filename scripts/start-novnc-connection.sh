@@ -197,7 +197,7 @@ page = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>noVNC Sessions</title>
+<title>Mu2eDAQ noVNC Sessions</title>
 <style>
   :root {{
     color-scheme: light dark;
@@ -247,7 +247,7 @@ page = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-  <h1>noVNC Sessions</h1>
+  <h1>Mu2eDAQ noVNC Sessions</h1>
   <div class="subtitle">{base_url}</div>
   <div class="grid">
     {cards}
