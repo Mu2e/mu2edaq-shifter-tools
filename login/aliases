@@ -11,4 +11,5 @@ alias hgrep="grep -R --include='*.h'"
 alias srcgrep="grep -R --include='*.cc' --include='*.h'"
 alias less='less -S' #no word wrap
 alias sshx='ssh-selector -c ~/config/mu2e_daq.yaml'
-alias mu2e='ssh-selector -c ~/config/mu2e_daq.yaml'
+alias nodes='ssh-selector -c ~/config/mu2e_daq.yaml'
+
