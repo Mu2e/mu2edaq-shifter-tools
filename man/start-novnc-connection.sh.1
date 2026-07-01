@@ -1,0 +1,111 @@
+.TH START-NOVNC-CONNECTION.SH 1 "2026-07-01" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a session dashboard
+.SH SYNOPSIS
+.B start-novnc-connection.sh
+[\fB\-H\fR \fIhost\fR]
+[\fB\-u\fR \fIuser\fR]
+[\fB\-p\fR \fIlocal_port\fR]
+[\fB\-r\fR \fIremote_port\fR]
+[\fB\-P\fR \fIpassword_file\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B start-novnc-connection.sh
+opens an SSH tunnel from a free local port to port 443 (by default) on
+the noVNC manager host, logged in as the current user unless
+overridden. Once the tunnel is accepting connections, the plain
+session-list page normally served at \fBhttps://localhost:\fIlocal_port\fR
+is fetched and scraped, and its links are rendered into a
+self-contained, modern-looking "dashboard" HTML page with one card per
+VNC session. That generated page, not the raw session list, is what
+gets opened in the browser.
+.PP
+If a VNC password file is found (see \fB\-P\fR below), each card's link
+is built with noVNC's \fBpassword\fR and \fBautoconnect=true\fR query
+parameters so the session connects automatically instead of prompting
+for a password.
+.PP
+The tunnel, and the temporary directory holding the generated
+dashboard file, are torn down when the script exits, whether via
+Ctrl-C, the ssh session dying, or normal termination.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR \-H ", " \-\-host " " \fIHOST\fR
+Remote host to tunnel to. Environment: \fBNOVNC_HOST\fR. Default:
+\fImu2e\-mgr\-01.fnal.gov\fR.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+SSH user. Environment: \fBNOVNC_USER\fR. Default: the current user.
+.TP
+.BR \-p ", " \-\-port " " \fIPORT\fR
+Local port for the tunnel. Environment: \fBNOVNC_LOCAL_PORT\fR.
+Default: an automatically chosen free port.
+.TP
+.BR \-r ", " \-\-remote\-port " " \fIPORT\fR
+Remote port to forward to. Environment: \fBNOVNC_REMOTE_PORT\fR.
+Default: \fI443\fR.
+.TP
+.BR \-P ", " \-\-password\-file " " \fIFILE\fR
+Path to a file whose first line is the VNC password. When present,
+it is used to build auto-connecting session links. Environment:
+\fBNOVNC_PASSWORD_FILE\fR. Default: \fI~/.novnc_password\fR; if the
+file does not exist, links are generated without a password and
+without auto-connect. If the file is readable by group or other, a
+warning is printed recommending \fBchmod 600\fR, but the password is
+still used.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the ssh command and target URL that would be used, and exit
+without opening a tunnel or a browser.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH ENVIRONMENT
+.TP
+.B BROWSER
+If set, used to launch the dashboard page. Falls back to
+.BR xdg-open (1)
+on Linux, or
+.BR open (1)
+on macOS.
+.TP
+.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE
+See OPTIONS above.
+.SH FILES
+.TP
+.I ~/.novnc_password
+Default location for the VNC password used to build auto-connecting
+session links. Should be readable only by the owner
+(\fBchmod 600\fR).
+.SH EXAMPLES
+Open a tunnel with all defaults:
+.PP
+.RS
+.EX
+start-novnc-connection.sh
+.EE
+.RE
+.PP
+Preview the ssh command without connecting:
+.PP
+.RS
+.EX
+start-novnc-connection.sh --dry-run
+.EE
+.RE
+.PP
+Enable auto-connecting session links:
+.PP
+.RS
+.EX
+echo "mypassword" > ~/.novnc_password
+chmod 600 ~/.novnc_password
+start-novnc-connection.sh
+.EE
+.RE
+.SH SEE ALSO
+.BR manage-vnc-servers.sh (1),
+.BR ssh (1)

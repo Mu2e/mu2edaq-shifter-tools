@@ -54,7 +54,29 @@ Do we need resource management? What about ports? How do we make sure that two i
 * DCS Status Page
 * Grafana Monitoring
 
+## VNC Utilities
+
+* `scripts/start-novnc-connection.sh [-H host] [-u user] [-p local_port] [-r remote_port] [-P password_file] [-n]`
+  Opens an SSH tunnel to the noVNC manager host and opens a generated,
+  card-based dashboard of the available VNC sessions in the browser
+  (instead of the plain session-list page). If `~/.novnc_password` (or
+  the file given via `-P`) exists, session links are built to
+  auto-connect using that password. See `man/start-novnc-connection.sh.1`.
+* `scripts/manage-vnc-servers.sh {start|stop|restart} [-H host] [-u user] [-P ports] [-y] [-n]`
+  Starts, stops, or restarts the `vncserver@` systemd units (display
+  ports 4-9 by default) on the noVNC manager host over ssh. Prompts
+  for confirmation unless `-y` is given, since this can disconnect
+  active sessions. See `man/manage-vnc-servers.sh.1`.
+
+## Man Pages
+
+Man pages for the scripts above live under `man/` and can be viewed
+directly without installing them, e.g.:
+```sh
+man ./man/start-novnc-connection.sh.1
+man ./man/manage-vnc-servers.sh.1
+```
+
 ## Other things
 
 * Kerberos Keytabs (Pat should have utilities for AL9)
-* VNC Servers

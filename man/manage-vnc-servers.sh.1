@@ -1,0 +1,85 @@
+.TH MANAGE-VNC-SERVERS.SH 1 "2026-07-01" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+manage-vnc-servers.sh \- start, stop, or restart VNC servers on the noVNC manager host
+.SH SYNOPSIS
+.B manage-vnc-servers.sh
+{\fBstart\fR|\fBstop\fR|\fBrestart\fR}
+[\fB\-H\fR \fIhost\fR]
+[\fB\-u\fR \fIuser\fR]
+[\fB\-P\fR \fIports\fR]
+[\fB\-y\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B manage-vnc-servers.sh
+connects over ssh to the noVNC manager host as a service account and
+runs \fBsystemctl \fIaction\fB vncserver@:\fIport\fB.service\fR for
+each configured VNC display port, in a single ssh session.
+.PP
+Because starting, stopping, or restarting these services can
+disconnect anyone currently using that display, the script asks for
+confirmation before doing anything unless \fB\-y\fR/\fB\-\-yes\fR is
+given. When run non-interactively (no controlling terminal) without
+\fB\-y\fR, it refuses to proceed.
+.PP
+Output from each port's systemctl invocation is reported individually
+as \fB:PORT -> OK\fR or \fB:PORT -> FAILED\fR.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR start | stop | restart
+Required. The systemctl action to run against every configured port.
+.TP
+.BR \-H ", " \-\-host " " \fIHOST\fR
+Remote host to connect to. Environment: \fBVNC_HOST\fR. Default:
+\fImu2e\-mgr\-01.fnal.gov\fR.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+SSH user. Environment: \fBVNC_USER\fR. Default: \fImu2ecr01\fR.
+.TP
+.BR \-P ", " \-\-ports " " \fIPORTS\fR
+Space- or comma-separated list of VNC display port numbers to act on.
+Environment: \fBVNC_PORTS\fR. Default: \fI"4 5 6 7 8 9"\fR.
+.TP
+.BR \-y ", " \-\-yes
+Skip the confirmation prompt.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the ssh/systemctl commands that would be run for each port,
+and exit without connecting.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH ENVIRONMENT
+.TP
+.B VNC_HOST ", " VNC_USER ", " VNC_PORTS
+See OPTIONS above.
+.SH EXAMPLES
+Preview a restart of the default ports without changing anything:
+.PP
+.RS
+.EX
+manage-vnc-servers.sh restart --dry-run
+.EE
+.RE
+.PP
+Restart only display :4, skipping the confirmation prompt:
+.PP
+.RS
+.EX
+manage-vnc-servers.sh restart -P 4 -y
+.EE
+.RE
+.PP
+Stop all default displays interactively:
+.PP
+.RS
+.EX
+manage-vnc-servers.sh stop
+.EE
+.RE
+.SH SEE ALSO
+.BR start-novnc-connection.sh (1),
+.BR systemctl (1),
+.BR ssh (1)
