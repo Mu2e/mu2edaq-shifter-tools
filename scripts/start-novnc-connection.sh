@@ -198,6 +198,7 @@ page = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8" />
 <title>Mu2eDAQ noVNC Sessions</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128421;&#65039;</text></svg>" />
 <style>
   :root {{
     color-scheme: light dark;
@@ -248,7 +249,7 @@ page = """<!DOCTYPE html>
 </head>
 <body>
   <h1>Mu2eDAQ noVNC Sessions</h1>
-  <div class="subtitle">{base_url}</div>
+  <div class="subtitle">Mu2eDAQ &middot; {base_url}</div>
   <div class="grid">
     {cards}
   </div>
