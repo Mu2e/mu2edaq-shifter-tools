@@ -5,6 +5,7 @@ start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a ses
 .B start-novnc-connection.sh
 [\fB\-H\fR \fIhost\fR]
 [\fB\-u\fR \fIuser\fR]
+[\fB\-J\fR \fIproxy_jump\fR]
 [\fB\-p\fR \fIlocal_port\fR]
 [\fB\-r\fR \fIremote_port\fR]
 [\fB\-P\fR \fIpassword_file\fR]
@@ -40,6 +41,14 @@ Remote host to tunnel to. Environment: \fBNOVNC_HOST\fR. Default:
 .BR \-u ", " \-\-user " " \fIUSER\fR
 SSH user. Environment: \fBNOVNC_USER\fR. Default: the current user.
 .TP
+.BR \-J ", " \-\-proxy\-jump " " \fIHOST\fR
+SSH ProxyJump host used to reach the remote host (passed to
+.BR ssh (1)
+as \fB\-J\fR). The special value \fBnone\fR (or an empty string)
+disables the jump host. Environment: \fBNOVNC_PROXY_JUMP\fR. Default:
+\fImu2egateway01.fnal.gov\fR when the remote host is
+\fImu2e\-mgr\-01.fnal.gov\fR, otherwise no jump host is used.
+.TP
 .BR \-p ", " \-\-port " " \fIPORT\fR
 Local port for the tunnel. Environment: \fBNOVNC_LOCAL_PORT\fR.
 Default: an automatically chosen free port.
@@ -72,7 +81,7 @@ on Linux, or
 .BR open (1)
 on macOS.
 .TP
-.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE
+.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE
 See OPTIONS above.
 .SH FILES
 .TP

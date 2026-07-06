@@ -56,12 +56,15 @@ Do we need resource management? What about ports? How do we make sure that two i
 
 ## VNC Utilities
 
-* `scripts/start-novnc-connection.sh [-H host] [-u user] [-p local_port] [-r remote_port] [-P password_file] [-n]`
+* `scripts/start-novnc-connection.sh [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-n]`
   Opens an SSH tunnel to the noVNC manager host and opens a generated,
   card-based dashboard of the available VNC sessions in the browser
-  (instead of the plain session-list page). If `~/.novnc_password` (or
-  the file given via `-P`) exists, session links are built to
-  auto-connect using that password. See `man/start-novnc-connection.sh.1`.
+  (instead of the plain session-list page). Tunnels through an SSH
+  ProxyJump host (`mu2egateway01.fnal.gov` by default when connecting to
+  `mu2e-mgr-01.fnal.gov`; override with `-J`, disable with `-J none`).
+  If `~/.novnc_password` (or the file given via `-P`) exists, session
+  links are built to auto-connect using that password.
+  See `man/start-novnc-connection.sh.1`.
 * `scripts/manage-vnc-servers.sh {start|stop|restart} [-H host] [-u user] [-P ports] [-y] [-n]`
   Starts, stops, or restarts the `vncserver@` systemd units (display
   ports 4-9 by default) on the noVNC manager host over ssh. Prompts

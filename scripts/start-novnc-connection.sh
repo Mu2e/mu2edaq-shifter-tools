@@ -21,6 +21,10 @@
 #                                               default mu2e-mgr-01.fnal.gov)
 #   -u, --user USER         ssh user           (env NOVNC_USER,
 #                                               default current user)
+#   -J, --proxy-jump HOST   ProxyJump host     (env NOVNC_PROXY_JUMP,
+#                            "none" disables    default mu2egateway01.fnal.gov
+#                                               when the remote host is
+#                                               mu2e-mgr-01.fnal.gov, else none)
 #   -p, --port PORT         local port to use  (env NOVNC_LOCAL_PORT,
 #                                               default: a free port)
 #   -r, --remote-port PORT  remote port        (env NOVNC_REMOTE_PORT,
@@ -36,21 +40,30 @@
 
 set -u
 
-host="${NOVNC_HOST:-mu2e-mgr-01.fnal.gov}"
+default_host="mu2e-mgr-01.fnal.gov"
+default_proxy_jump="mu2egateway01.fnal.gov"
+
+host="${NOVNC_HOST:-$default_host}"
 user="${NOVNC_USER:-$(id -un)}"
+proxy_jump="${NOVNC_PROXY_JUMP:-}"
+proxy_jump_set=0
+[ -n "${NOVNC_PROXY_JUMP+x}" ] && proxy_jump_set=1
 local_port="${NOVNC_LOCAL_PORT:-}"
 remote_port="${NOVNC_REMOTE_PORT:-443}"
 password_file="${NOVNC_PASSWORD_FILE:-$HOME/.novnc_password}"
 dry_run=0
 
 USAGE="\
-usage: $(basename "$0") [-H host] [-u user] [-p local_port] [-r remote_port] [-P password_file] [-n]
+usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-n]
 
 Open an SSH tunnel to port $remote_port on the remote host and launch a
 browser pointed at the local end of the tunnel.
 
-  -H, --host HOST          remote host (default mu2e-mgr-01.fnal.gov)
+  -H, --host HOST          remote host (default $default_host)
   -u, --user USER          ssh user (default: current user)
+  -J, --proxy-jump HOST    ssh ProxyJump host; \"none\" disables it
+                           (default $default_proxy_jump when the remote
+                           host is $default_host, otherwise none)
   -p, --port PORT          local port (default: an automatically chosen free port)
   -r, --remote-port PORT   remote port (default 443)
   -P, --password-file FILE file whose first line is the VNC password, used to
@@ -64,6 +77,7 @@ while [ -n "${1:-}" ]; do
     case "$1" in
         -H|--host)          shift; host="${1:-}";;
         -u|--user)          shift; user="${1:-}";;
+        -J|--proxy-jump)    shift; proxy_jump="${1:-}"; proxy_jump_set=1;;
         -p|--port)          shift; local_port="${1:-}";;
         -r|--remote-port)   shift; remote_port="${1:-}";;
         -P|--password-file) shift; password_file="${1:-}";;
@@ -73,6 +87,16 @@ while [ -n "${1:-}" ]; do
     esac
     shift
 done
+
+# Default the ProxyJump host when tunnelling to the stock manager host
+# and the user has not said otherwise; "none" (or empty) disables it.
+if [ "$proxy_jump_set" -eq 0 ] && [ "$host" = "$default_host" ]; then
+    proxy_jump="$default_proxy_jump"
+fi
+[ "$proxy_jump" = "none" ] && proxy_jump=""
+
+jump_opts=()
+[ -n "$proxy_jump" ] && jump_opts=(-J "$proxy_jump")
 
 # Find a free TCP port on the loopback interface.
 find_free_port() {
@@ -270,13 +294,13 @@ fi
 url="https://localhost:$local_port"
 
 if [ "$dry_run" -eq 1 ]; then
-    echo "ssh -N -o ExitOnForwardFailure=yes -L $local_port:localhost:$remote_port $user@$host"
+    echo "ssh -N -o ExitOnForwardFailure=yes${jump_opts[*]:+ ${jump_opts[*]}} -L $local_port:localhost:$remote_port $user@$host"
     echo "browser -> $url"
     exit 0
 fi
 
-echo "Opening SSH tunnel: localhost:$local_port -> $user@$host:$remote_port"
-ssh -N -o ExitOnForwardFailure=yes \
+echo "Opening SSH tunnel: localhost:$local_port -> $user@$host:$remote_port${proxy_jump:+ (via $proxy_jump)}"
+ssh -N -o ExitOnForwardFailure=yes ${jump_opts[@]:+"${jump_opts[@]}"} \
     -L "$local_port:localhost:$remote_port" "$user@$host" &
 ssh_pid=$!
 
