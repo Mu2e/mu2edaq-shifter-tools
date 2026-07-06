@@ -1,0 +1,79 @@
+# Example ~/.ssh/config entries for Mu2e hosts
+#
+# Copy the entries you need into your own ~/.ssh/config and adjust
+# the User field to match your Fermilab/Mu2e username.
+
+# Set the default domain for Hosts to FNAL.GOV
+CanonicalizeHostname yes
+CanonicalDomains fnal.gov
+
+Host *
+        UseKeychain             yes
+        ForwardX11              yes
+        ForwardX11Trusted       yes
+#        IdentityFile            ~/.ssh/<myusername>_rsa
+        Cipher                  blowfish
+        ForwardAgent            true
+        CheckHostIP             yes
+        Compression             yes
+        ForwardX11              true
+        StrictHostKeyChecking   no
+#       GSSAPITrustDns          yes
+#       CompressionLevel        6
+#       GSSAPIKeyExchange       no
+#       GSSAPIAuthentication    yes
+#       ControlMaster           auto
+#       ControlPath             ~/.ssh/connections/%r_%h_%p
+
+#
+# Config for Fermilab Public Network Hosts
+Host 131.225.*.* *.fnal.gov
+        Protocol                2
+        GSSAPIAuthentication    yes
+        GSSAPIDelegateCredentials yes
+#       GSSAPITrustDns          yes
+        ForwardX11Trusted       yes
+        ForwardX11              yes
+        Compression             yes
+        CheckHostIP             yes
+
+# Mu2e Gateway Machines
+Host mu2egateway*
+     User mu2edaq
+
+Host mu2e-*
+     ProxyJump mu2edaq@mu2edaq-gateway.fnal.gov
+
+# IERC Teststand Setup
+Host mu2edaq04.fnal.gov mu2edaq07.fnal.gov mu2edaq09.fnal.gov mu2edaq10.fnal.gov mu2edaq11.fnal.gov mu2edaq13.fnal.gov mu2edaq14.fnal.gov mu2edaq22.fnal.gov
+     User mu2edaq
+     ProxyJump mu2edaq@mu2edaq-gateway.fnal.gov
+
+# Mu2e CFO Nodes
+Host mu2e-cfo*.fnal.gov
+     User mu2edaq
+     ProxyJump mu2egateway01.fnal.gov
+
+# Mu2e Control Room Nodes
+Host mu2e-mc1-cr-*
+     User mu2eshift
+     ProxyJump mu2eshift@mu2egateway01.fnal.gov
+
+# Mu2e Tracker Nodes
+Host mu2e-trk*.fnal.gov
+     User mu2edaq
+     ProxyJump mu2egateway01.fnal.gov
+
+# Mu2e Calo Nodes
+Host mu2e-calo*.fnal.gov
+     User mu2edaq
+     ProxyJump mu2egateway01.fnal.gov
+
+# Mu2e Data Logger Nodes
+Host mu2e-dl-*.fnal.gov
+     User mu2edaq
+     ProxyJump mu2egateway01.fnal.gov
+
+Host mu2e-mgr-*.fnal.gov
+     User mu2edaq
+     ProxyJump mu2egateway01.fnal.gov
