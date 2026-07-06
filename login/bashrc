@@ -38,7 +38,7 @@ envreset ()
 # \u short user, \h short hostname (to first dot), \W basename of cwd.
 # user@host in blue, dir in green; \[..\] wrap the colors so bash
 # computes the prompt width correctly.
-export PS1='[\[\e[34m\]\u@\h\[\e[0m\]:/\[\e[32m\]\W\[\e[0m\]]: '
+export PS1='[\[\e[34m\]\u@\h\[\e[0m\]: \[\e[32m\]\W\[\e[0m\]]: '
 
 ###############
 # This is a hack to avoid sharing kerberos tickets between users on the same 
