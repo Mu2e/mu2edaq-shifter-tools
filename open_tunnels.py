@@ -7,8 +7,10 @@ from PyQt5.QtWidgets import QApplication, QMessageBox
 from PyQt5.QtCore import Qt
 import sys
 
-# Calculate base port using user ID
-userid = os.getuid()
+# Calculate base port using user ID.
+# os.getuid() is POSIX-only; fall back to the process id on platforms that
+# lack it (e.g. Windows) so importing this module never raises AttributeError.
+userid = os.getuid() if hasattr(os, "getuid") else os.getpid()
 baseport = userid + 973
 
 
