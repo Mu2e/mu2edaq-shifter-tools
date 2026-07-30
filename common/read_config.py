@@ -1,5 +1,6 @@
 #!/bin/env python3
 
+import sys
 import yaml
 import click
 import pathlib
