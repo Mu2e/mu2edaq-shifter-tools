@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# get_krb_daq_principle.sh
+# get_krb_daq_principal.sh
 #
 # Determine the Kerberos principal for the current DAQ group account
 # (mu2eshift, mu2edaq, mu2edcs, ...) from its deployed keytab.
@@ -26,6 +26,8 @@
 #
 # Intended to be sourced (so the exports persist), but also runs
 # standalone to print the principal.
+#
+# See get_krb_daq_principal.sh(1).
 
 _gkdp_main() {
     local keytab_dir="${KRB5_KEYTAB_DIR:-$HOME/.krb5}"
@@ -37,14 +39,29 @@ _gkdp_main() {
         case "$1" in
             -d|--keytab-dir) shift; keytab_dir="${1-}";;
             -h|--help)
-                echo "usage: get_krb_daq_principle.sh [-d|--keytab-dir DIR]"
+                echo "usage: get_krb_daq_principal.sh [-d|--keytab-dir DIR]"
                 return 0;;
             *)
-                echo "get_krb_daq_principle.sh: unknown option: $1" >&2
+                echo "get_krb_daq_principal.sh: unknown option: $1" >&2
                 return 1;;
         esac
         shift
     done
+
+    # Pull in the shared Pass/Fail reporter if it is reachable.
+    if ! command -v daq_status_line >/dev/null 2>&1; then
+        local here lib
+        here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+        for lib in "$here/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+            [ -f "$lib" ] && { . "$lib"; break; }
+        done
+    fi
+    if ! command -v daq_status_line >/dev/null 2>&1; then
+        daq_status_line() {
+            if [ "$1" -eq 0 ]; then printf '%s: \033[32mPass\033[0m\n' "$2"
+            else printf '%s: \033[31mFail\033[0m\n' "$2"; fi
+        }
+    fi
 
     local user keytab principal
     user=$(id -un)
@@ -66,7 +83,7 @@ _gkdp_main() {
     export KRB5_PRINCIPAL="$principal"
     export KRB5_KEYTAB="$keytab"
 
-    if [ -n "$VERBOSE" ]; then
+    if [ -n "${VERBOSE:-}" ]; then
         echo "DAQ Kerberos principal: $KRB5_PRINCIPAL"
         echo "Using keytab:           $KRB5_KEYTAB"
     fi
@@ -74,24 +91,19 @@ _gkdp_main() {
     local rc
     if [ -f "$KRB5_KEYTAB" ]; then
         # Obtain the actual ticket from the keytab for this principal.
-        if [ -n "$VERBOSE" ]; then
+        if [ -n "${VERBOSE:-}" ]; then
             kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL"
         else
             kinit -kt "$KRB5_KEYTAB" "$KRB5_PRINCIPAL" 2>/dev/null
         fi
         rc=$?
     else
-        [ -n "$VERBOSE" ] && \
-            echo "get_krb_daq_principle.sh: warning: keytab not found, cannot kinit: $KRB5_KEYTAB" >&2
+        [ -n "${VERBOSE:-}" ] && \
+            echo "get_krb_daq_principal.sh: warning: keytab not found, cannot kinit: $KRB5_KEYTAB" >&2
         rc=1
     fi
 
-    # "<label>: " then Pass (green) / Fail (red).
-    if [ "$rc" -eq 0 ]; then
-        printf '%s: \033[32mPass\033[0m\n' "Configuring Kerberos Ticket"
-    else
-        printf '%s: \033[31mFail\033[0m\n' "Configuring Kerberos Ticket"
-    fi
+    daq_status_line "$rc" "Configuring Kerberos Ticket"
     return $rc
 }
 

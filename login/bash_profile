@@ -1,4 +1,6 @@
 # .bash_profile
+#
+# Installed by install-login.sh from login/bash_profile.
 
 # Get the aliases and functions
 if [ -f ~/.bashrc ]; then
@@ -6,25 +8,29 @@ if [ -f ~/.bashrc ]; then
 fi
 
 # User specific environment and startup programs
-
 PATH=$PATH:$HOME/bin
-
 export PATH
 
-. "$HOME/.local/bin/env"
+# uv/pipx-style local environment, if one has been set up.
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
-# Capture the Kerberos principal from the ticket we logged in with,
-# which sets KRB5_PRINCIPAL.
-source "$HOME/bin/get_krb_principal.sh"
+###########################################################################
+# Kerberos and git bootstrap. The ORDER BELOW IS LOAD-BEARING; see
+# docs/ARCHITECTURE.md before rearranging it.
+###########################################################################
 
-# Use that principal to configure the git/github environment
-# (user.name/email, GIT_SSH_COMMAND -> id_<user>_rsa, ssh-add).
-source "$HOME/bin/set_git_env.sh"
+# 1. Capture the Kerberos principal from the ticket we logged in with,
+#    which sets KRB5_PRINCIPAL.
+[ -f "$HOME/bin/get_krb_principal.sh" ] && . "$HOME/bin/get_krb_principal.sh"
 
-# Only now that the git/github environment is fully set up do we
-# destroy the kerberos ticket, so we fall back to the group keytab.
-kdestroy
+# 2. Use that principal to configure the git/github environment
+#    (user.name/email, GIT_SSH_COMMAND -> id_<user>_rsa, ssh-add).
+[ -f "$HOME/bin/set_git_env.sh" ] && . "$HOME/bin/set_git_env.sh"
 
-# With the login ticket gone, obtain a fresh ticket for the current
-# DAQ group account from its deployed keytab (kinit via the script).
-source "$HOME/bin/get_krb_daq_principle.sh"
+# 3. Only now that the git/github environment is fully set up do we
+#    destroy the kerberos ticket, so we fall back to the group keytab.
+kdestroy >/dev/null 2>&1
+
+# 4. With the login ticket gone, obtain a fresh ticket for the current
+#    DAQ group account from its deployed keytab (kinit via the script).
+[ -f "$HOME/bin/get_krb_daq_principal.sh" ] && . "$HOME/bin/get_krb_daq_principal.sh"

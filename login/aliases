@@ -1,7 +1,7 @@
 # .aliases
 #
 # Shell aliases for the Mu2e DAQ shifter accounts.
-# Sourced from .bashrc
+# Sourced from .bashrc; installed by install-login.sh from login/aliases.
 
 alias ll='ls -l --color=auto'
 alias l='ll'
@@ -13,3 +13,12 @@ alias less='less -S' #no word wrap
 alias sshx='ssh-selector -c ~/config/mu2e_daq.yaml'
 alias nodes='ssh-selector -c ~/config/mu2e_daq.yaml'
 
+# setup-online.sh has to be sourced to be useful: it cds into the test
+# release and defines the ots environment in this shell.
+alias setup_online='source $HOME/bin/setup-online.sh'
+alias setup-online='source $HOME/bin/setup-online.sh'
+
+# Shorthands for the partition lifecycle commands (all installed in ~/bin).
+alias daq-status='daq-status.sh'
+alias start-daq='start-daq.sh'
+alias stop-daq='stop-daq.sh'

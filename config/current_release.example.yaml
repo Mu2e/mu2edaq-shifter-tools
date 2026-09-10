@@ -1,0 +1,36 @@
+# DAQ release description, read by daq-install-tools.
+#
+# Copy to current_release.yaml and edit for the release being deployed.
+#
+# Versions are structured rather than free text so they can be compared
+# and re-rendered. The fields below produce:
+#
+#     base_release -> d09_00_00
+#     test_release -> d09_00_00_alpha
+#
+# Numeric components are zero-padded to two digits.
+
+base_release:
+  prefix: "d"        # release family letter
+  major: 9
+  minor: 0
+  patch: 0
+  suffix: ""         # optional trailing tag, e.g. "rc1"
+  path: "/mu2e/releases/v9_00_00"
+
+test_release:
+  prefix: "d"
+  major: 9
+  minor: 0
+  patch: 0
+  suffix: "alpha"
+  path: "/home/mu2edaq/test_rel_v9_00_00"
+
+# Where the DAQ tools are installed. Every key other than basepath is
+# joined onto it, so "bin" below means /home/mu2edaq/daq-tools/bin.
+install_path:
+  basepath: "/home/mu2edaq/daq-tools"
+  bin: "bin"
+  config: "config"
+  data: "data"
+  man: "man"
