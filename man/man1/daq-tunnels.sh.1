@@ -1,0 +1,154 @@
+.TH DAQ-TUNNELS.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-tunnels.sh \- manage the SSH port forwards for the Mu2e shifter GUIs
+.SH SYNOPSIS
+.B daq-tunnels.sh
+[\fIoptions\fR]
+{\fBstart\fR|\fBstop\fR|\fBrestart\fR|\fBstatus\fR}
+.SH DESCRIPTION
+.B daq-tunnels.sh
+opens the local port forwards through which the otsdaq gateway, the DQM
+displays, the subsystem GUIs and Grafana are reached from a shifter
+workstation.
+.PP
+Two forwarding groups are opened, each in its own \fBssh\fR process:
+.TP
+.B daq
+The otsdaq gateway, DQM and subsystem GUIs on \fImu2e\-cfo\-01\fR and
+\fImu2e\-dl\-01\fR.
+.TP
+.B extra
+Grafana on \fImu2e\-dcs\-01\fR.
+.PP
+Keeping them separate means a single unavailable forward, which
+\fBExitOnForwardFailure\fR turns into a dead ssh, cannot take the other
+group down with it.
+.PP
+Kerberos is used for authentication (\fBssh \-K\fR), so a valid ticket
+is required; \fBstart\fR refuses to run without one.
+.SS Stopping tunnels
+The pid of each ssh process is recorded in a state file, and
+\fBstop\fR terminates exactly those pids.
+.PP
+This is deliberate. An earlier version of this script stopped tunnels
+with \fBpkill \-f 'ssh.*mu2e\-'\fR, which also matched \(em and killed
+\(em the operator's own interactive ssh sessions to any Mu2e host, and
+any unrelated tunnel to a Mu2e machine. The pattern-matching behaviour
+is still available through \fB\-\-all\-matching\fR for the case where
+the state file has been lost, but it is no longer the default.
+.SS Service tables
+The forwarded ports are defined by two tables of
+\fIlabel\fB=\fIport\fR[\fB!\fR]\fB:\fIhost\fR entries. A \fB!\fR after
+the port means it is fixed and takes no offset; every other port has
+the value of \fB\-\-offset\fR added to it. Both tables can be replaced
+from the environment if the ports move, without editing the script.
+.PP
+The defaults are:
+.PP
+.RS
+.nf
+shift=3075  crv=3085  calo=3025  trig=3045  dqm=5029
+dqmvis=5033 crvdqm=8877! (mu2e-dl-01)     cfo=3095
+stm=30351   trk=3065    grafana=3000!     (mu2e-dcs-01)
+.fi
+.RE
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR start | stop | restart | status
+The action to take. Defaults to \fBstart\fR.
+.TP
+.BR \-o ", " \-\-offset " " \fIN\fR
+Add \fIN\fR to every non-fixed port, so a second operator can forward
+the same services without colliding. Environment:
+\fBMU2EDAQ_TUNNEL_OFFSET\fR. Default: \fI0\fR. A bare number is also
+accepted as a positional argument, as in the original script.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+SSH user, used for both the jump host and the target. Environment:
+\fBMU2EDAQ_TUNNEL_USER\fR. Default: \fImu2eshift\fR.
+.TP
+.BR \-H ", " \-\-host " " \fIHOST\fR
+Host to ssh to. Environment: \fBMU2EDAQ_TUNNEL_HOST\fR. Default:
+\fImu2e\-dcs\-01.fnal.gov\fR.
+.TP
+.BR \-J ", " \-\-proxy\-jump " " \fIHOST\fR
+ProxyJump host, or \fBnone\fR to connect directly. Environment:
+\fBMU2EDAQ_TUNNEL_JUMP\fR. Default: \fImu2egateway02.fnal.gov\fR.
+.TP
+.BR \-s ", " \-\-state " " \fIFILE\fR
+Where the ssh pids are recorded. Environment:
+\fBMU2EDAQ_TUNNEL_STATE_SH\fR. Default: \fI~/.mu2edaq/daq_tunnels\fR.
+.TP
+.BR \-A ", " \-\-all\-matching
+On \fBstop\fR, additionally \fBpkill\fR any ssh process matching the
+Mu2e tunnel patterns. This can kill unrelated ssh sessions; use it only
+when the state file has been lost.
+.TP
+.BR \-y ", " \-\-yes
+Skip the confirmation prompt on \fBstop\fR.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the ssh command lines and change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH ENVIRONMENT
+.TP
+.B MU2EDAQ_TUNNEL_SERVICES
+Replaces the \fBdaq\fR service table.
+.TP
+.B MU2EDAQ_TUNNEL_EXTRA_SERVICES
+Replaces the \fBextra\fR service table.
+.TP
+.B DAQ_TUNNELS_SH_OPTS
+Extra options, prepended to the command line.
+.SH FILES
+.TP
+.I ~/.mu2edaq/daq_tunnels
+Recorded ssh pids, one \fBpid, group, host, offset\fR record per line.
+.SH EXIT STATUS
+Returns 0 when the action completed or the operator declined at the
+prompt, 1 when there is no Kerberos ticket or the offset is not a
+number, and 2 for an unrecognised option or argument. A failed
+forwarding group is reported on stderr but does not by itself change
+the exit status.
+.SH EXAMPLES
+Open the standard forwards:
+.PP
+.RS
+.nf
+kinit
+daq-tunnels.sh start
+.fi
+.RE
+.PP
+Open a second set 100 ports higher, so two operators do not collide:
+.PP
+.RS
+.nf
+daq-tunnels.sh -o 100 start
+.fi
+.RE
+.PP
+See what is currently forwarded:
+.PP
+.RS
+.nf
+daq-tunnels.sh status
+.fi
+.RE
+.PP
+Close them without being asked:
+.PP
+.RS
+.nf
+daq-tunnels.sh -y stop
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-open-tunnels (1),
+.BR start-novnc-connection.sh (1),
+.BR ssh (1),
+.BR kinit (1)

@@ -1,0 +1,130 @@
+.TH START-DAQ.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+start-daq.sh \- start the Mu2e DAQ for one partition in tmux
+.SH SYNOPSIS
+.B start-daq.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+[\fB\-e\fR \fIenvironment\fR]
+[\fB\-a\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B start-daq.sh
+brings up one DAQ partition. It creates a tmux session named
+\fBdaq\-\fIpartition\fR whose first window is a plain shell for the
+operator, then adds one window per active environment. Each of those
+windows sources
+.BR setup-online.sh (1)
+for its environment and runs \fBots\fR, dropping to an interactive
+shell when \fBots\fR exits so the window survives for inspection.
+.PP
+Windows are named \fBdaq\-\fIpartition\fB\-\fIenvironment\fR.
+.BR stop-daq.sh (1)
+addresses them by that name, so the two commands do not have to agree
+on a window ordering.
+.PP
+The set of environments to start comes from the partition's
+\fBactive_environments\fR list in the operations YAML, unless
+overridden with one or more \fB\-e\fR options.
+.PP
+The Python virtual environment that
+.BR daq-read-config (1)
+needs is created automatically by running
+.BR bootstrap.sh (1)
+if it is missing, so a fresh checkout can be started with no other
+preparation.
+.PP
+Starting a partition that already has a tmux session is refused; stop
+it first.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR. Default:
+the first \fIdaq\-operations.yaml\fR on the config search path (see
+.BR daq-read-config (1)).
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition to start. Environment: \fBMU2EDAQ_PARTITION\fR. Default:
+\fIpartition_0\fR.
+.TP
+.BR \-e ", " \-\-environment " " \fINAME\fR
+Start only this environment instead of the partition's active list.
+May be given more than once.
+.TP
+.BR \-a ", " \-\-attach
+Attach to the tmux session once every window has been created.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the tmux commands that would be run and exit without starting
+anything.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B START_DAQ_SH_OPTS
+Extra options, prepended to the command line. \fBSTART_DAQ_OPTS\fR is
+also accepted for compatibility with the pre-rename script, and is
+used only when \fBSTART_DAQ_SH_OPTS\fR is unset.
+.TP
+.B MU2EDAQ_ROOT
+Installation root, if it cannot be found by walking up from the
+script. Recorded in \fI~/.mu2edaq/env\fR by
+.BR install-login.sh (1).
+.SH FILES
+.TP
+.I config/daq-operations.yaml
+Partition and environment definitions.
+.TP
+.I ~/.mu2edaq/env
+Recorded installation root.
+.SH EXIT STATUS
+.TP
+.B 0
+The session was created, or the dry run completed.
+.TP
+.B 1
+tmux is missing, the configuration could not be read, the partition has
+no active environments, or its session already exists.
+.TP
+.B 2
+A command line option was not recognised.
+.SH EXAMPLES
+Start the default partition and attach to it:
+.PP
+.RS
+.nf
+start-daq.sh -a
+.fi
+.RE
+.PP
+Start only the tracker environment of \fIpartition_1\fR, using an
+explicit config:
+.PP
+.RS
+.nf
+start-daq.sh -c ~/my-ops.yaml -z partition_1 -e tracker
+.fi
+.RE
+.PP
+See what would happen without touching tmux:
+.PP
+.RS
+.nf
+start-daq.sh -n -z partition_0
+.fi
+.RE
+.SH SEE ALSO
+.BR stop-daq.sh (1),
+.BR daq-status.sh (1),
+.BR setup-online.sh (1),
+.BR create-environment.sh (1),
+.BR daq-read-config (1),
+.BR bootstrap.sh (1),
+.BR tmux (1)

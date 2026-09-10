@@ -1,0 +1,87 @@
+.TH DAQ-LS2JSON 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-ls2json \- dump directory listings to JSON
+.SH SYNOPSIS
+.B daq-ls2json
+[\fB\-o\fR \fIfile\fR]
+[\fB\-D\fR]
+[\fB\-\-indent\fR \fIn\fR]
+[\fB\-v\fR]
+[\fIdirectory\fR...]
+.SH DESCRIPTION
+.B daq-ls2json
+records the contents of one or more directories \(em name, type, size
+and modification time \(em as JSON, so that two machines, or the same
+machine at two points in time, can be compared with an ordinary
+\fBdiff\fR.
+.PP
+The output is a list of objects, one per directory:
+.PP
+.RS
+.nf
+[
+  {
+    "directory": "/home/mu2edaq/config",
+    "files": [
+      {"name": "tracker.fcl", "type": "file",
+       "size": 4096, "modified_time": 1789062768.8}
+    ]
+  }
+]
+.fi
+.RE
+.PP
+A directory that cannot be read contributes an \fBerror\fR key
+alongside an empty \fBfiles\fR list, so a partial failure is visible in
+the output instead of being silently dropped. Entries that vanish
+during the walk, and broken symlinks, are skipped.
+.PP
+With no directory argument the current directory is used.
+.SH OPTIONS
+.TP
+.BR \-o ", " \-\-output " " \fIFILE\fR
+Write the JSON to \fIFILE\fR instead of standard output. Progress
+messages go to stderr, so the file receives only JSON.
+.TP
+.BR \-D ", " \-\-include\-dirs
+Include subdirectories in the listing, each typed as
+\fBdirectory\fR. By default only files are listed.
+.TP
+.B \-\-indent " " \fIN\fR
+JSON indentation. Default 4; use 0 for one compact line, which diffs
+poorly but greps well.
+.TP
+.BR \-v ", " \-\-verbose
+Print a per-directory entry count, and any errors, to stderr.
+.TP
+.B \-\-version
+Print the package version and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH EXIT STATUS
+Returns 0 when the listing was produced, including when some directory
+reported an error, and 1 when the output file could not be written.
+.SH EXAMPLES
+Compare a release directory across two nodes:
+.PP
+.RS
+.nf
+ssh mu2edaq01 daq-ls2json /mu2e/releases/v9_00_00 > a.json
+ssh mu2edaq02 daq-ls2json /mu2e/releases/v9_00_00 > b.json
+diff a.json b.json
+.fi
+.RE
+.PP
+Record several directories, including subdirectories:
+.PP
+.RS
+.nf
+daq-ls2json -D -o listing.json /home/mu2edaq/config /home/mu2edaq/data
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-cluster-cp (1),
+.BR daq-install-tools (1),
+.BR diff (1),
+.BR jq (1)

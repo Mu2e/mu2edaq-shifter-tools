@@ -145,7 +145,7 @@ else
 fi
 echo "  Shell commands:           ./start-daq.sh, ./stop-daq.sh,"
 echo "                            scripts/daq-status.sh, scripts/setup-online.sh, ..."
-echo "  Man pages (uninstalled):  man -M man daq-read-config"
+echo "  Man pages (uninstalled):  man -M \"$HERE/man\" daq-read-config"
 if [ "$DEV" = 1 ]; then
     echo "  Run the tests with:       python -m pytest"
 fi

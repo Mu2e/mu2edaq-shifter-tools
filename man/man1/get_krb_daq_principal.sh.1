@@ -1,0 +1,103 @@
+.TH GET_KRB_DAQ_PRINCIPAL.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+get_krb_daq_principal.sh \- obtain a DAQ group ticket from its keytab
+.SH SYNOPSIS
+.B source get_krb_daq_principal.sh
+[\fB\-d\fR \fIkeytab-dir\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B get_krb_daq_principal.sh
+determines the Kerberos principal of the current DAQ group account
+(\fImu2eshift\fR, \fImu2edaq\fR, \fImu2edcs\fR, ...) from its deployed
+keytab, then runs \fBkinit \-kt\fR to obtain a ticket for it.
+.PP
+Keytabs are deployed one per account as
+\fI<keytab-dir>/<user>.keytab\fR. The script looks up the keytab
+matching the current user and extracts the FNAL.GOV principal from it.
+If the current user does not match a keytab, or the keytab is
+unreadable, it falls back to the default identity
+.PP
+.RS
+.nf
+mu2edaq/mu2edaq/mu2e.fnal.gov@FNAL.GOV   (from mu2edaq.keytab)
+.fi
+.RE
+.PP
+On success it exports \fBKRB5_PRINCIPAL\fR and \fBKRB5_KEYTAB\fR, and
+reports \fBConfiguring Kerberos Ticket: Pass\fR or \fBFail\fR.
+.PP
+.B This script should be sourced,
+so the exports persist.
+.SS Position in the login sequence
+The installed \fI~/.bash_profile\fR runs four steps in a fixed order,
+and the order is load-bearing:
+.IP 1. 4
+.BR get_krb_principal.sh (1)
+reads the principal from the ticket the human logged in with.
+.IP 2. 4
+.BR set_git_env.sh (1)
+uses that principal to set the git identity and SSH key, so commits are
+attributed to the person rather than to the group account.
+.IP 3. 4
+\fBkdestroy\fR drops the human's ticket.
+.IP 4. 4
+This script obtains a fresh ticket for the group account from its
+keytab.
+.PP
+Moving step 4 before step 2 would attribute every commit to the group
+account. Dropping step 3 would leave the human's credentials available
+to anything running as the group account.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR \-d ", " \-\-keytab\-dir " " \fIDIR\fR
+Directory holding the per-account keytabs. Environment:
+\fBKRB5_KEYTAB_DIR\fR. Default: \fI~/.krb5\fR.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and return.
+.SH ENVIRONMENT
+.TP
+.B KRB5_PRINCIPAL
+Set to the resolved principal.
+.TP
+.B KRB5_KEYTAB
+Set to the keytab the principal came from.
+.TP
+.B VERBOSE
+When non-empty, print the principal, the keytab path, and the full
+\fBkinit\fR output.
+.SH FILES
+.TP
+.I ~/.krb5/<user>.keytab
+The per-account keytabs.
+.TP
+.I data/mu2e_kerberos_principals.json
+The list of valid Mu2e group principals, for reference.
+.SH EXIT STATUS
+Returns the status of \fBkinit\fR: 0 on success, 1 when the keytab is
+missing or \fBkinit\fR failed, and 2 for an unrecognised option.
+.SH EXAMPLES
+Obtain the group ticket for this shell:
+.PP
+.RS
+.nf
+source get_krb_daq_principal.sh
+klist
+.fi
+.RE
+.PP
+Use keytabs from an alternative location, verbosely:
+.PP
+.RS
+.nf
+VERBOSE=1 source get_krb_daq_principal.sh -d /etc/krb5/keytabs
+.fi
+.RE
+.SH SEE ALSO
+.BR get_krb_principal.sh (1),
+.BR set_git_env.sh (1),
+.BR install-login.sh (1),
+.BR kinit (1),
+.BR klist (1)

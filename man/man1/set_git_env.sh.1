@@ -1,0 +1,93 @@
+.TH SET_GIT_ENV.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+set_git_env.sh \- configure git and GitHub access from the Kerberos principal
+.SH SYNOPSIS
+.B source set_git_env.sh
+[\fB\-k\fR \fIkey\fR]
+[\fB\-l\fR]
+[\fB\-v\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B set_git_env.sh
+derives the git identity and GitHub credentials of the current operator
+from \fBKRB5_PRINCIPAL\fR, which
+.BR get_krb_principal.sh (1)
+exports. It:
+.IP \(bu 4
+sets git \fBuser.email\fR to the full principal and \fBuser.name\fR to
+the part before the \fB@\fR;
+.IP \(bu 4
+exports \fBGIT_SSH_COMMAND\fR pointing at the per-user key
+\fI~/.ssh/id_<user>_rsa\fR;
+.IP \(bu 4
+adds that key to the ssh-agent \(em but only when stdin is a terminal,
+so there is somewhere to type the passphrase, and only when an agent
+exists to hold it. A key whose fingerprint is already loaded is not
+added again, so the passphrase is not requested twice.
+.PP
+Each step reports \fBPass\fR in green or \fBFail\fR in red. A missing
+private key is a \fBFail\fR on the SSH step but does not stop the rest.
+.PP
+Because the identity comes from the ticket rather than from a hardcoded
+table, one set of dotfiles serves every shifter, and commits made from
+a shared group account are still attributed to the individual.
+.PP
+.B This script should be sourced,
+so \fBGIT_SSH_COMMAND\fR persists.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR \-k ", " \-\-key " " \fIFILE\fR
+Private key for \fBGIT_SSH_COMMAND\fR. Environment:
+\fBGIT_SSH_KEY\fR. Default: \fI~/.ssh/id_<user>_rsa\fR, where
+\fI<user>\fR is the principal's user part.
+.TP
+.BR \-l ", " \-\-local
+Write the identity to the repository's config (\fB\-\-local\fR) instead
+of the user's global config. Useful when only one clone should carry
+this identity.
+.TP
+.BR \-v ", " \-\-verbose
+Print the resolved settings and the full \fBssh\-add\fR output.
+Environment: \fBVERBOSE\fR.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and return.
+.SH ENVIRONMENT
+.TP
+.B KRB5_PRINCIPAL
+Required input. Without it the script reports a \fBFail\fR and returns
+1.
+.TP
+.B GIT_SSH_COMMAND
+Exported by this script.
+.TP
+.B SSH_AUTH_SOCK
+Consulted to decide whether an agent is available.
+.SH EXIT STATUS
+Returns 0 on success, 1 when \fBKRB5_PRINCIPAL\fR is unset, and 2 for
+an unrecognised option.
+.SH EXAMPLES
+Configure this shell for GitHub access:
+.PP
+.RS
+.nf
+source get_krb_principal.sh
+source set_git_env.sh -v
+.fi
+.RE
+.PP
+Apply the identity only to the current clone:
+.PP
+.RS
+.nf
+source set_git_env.sh --local
+.fi
+.RE
+.SH SEE ALSO
+.BR get_krb_principal.sh (1),
+.BR get_krb_daq_principal.sh (1),
+.BR setup-online.sh (1),
+.BR git-config (1),
+.BR ssh-add (1)

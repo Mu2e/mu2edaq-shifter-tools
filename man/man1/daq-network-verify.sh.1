@@ -1,0 +1,109 @@
+.TH DAQ-NETWORK-VERIFY.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-network-verify.sh \- sweep the DAQ private networks and report live hosts
+.SH SYNOPSIS
+.B daq-network-verify.sh
+[\fB\-N\fR \fInetworks\fR]
+[\fB\-o\fR \fIdir\fR]
+[\fB\-s\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B daq-network-verify.sh
+is a diagnostic for the DAQ private networks. It pings every address on
+each configured network with \fBnmap \-sn\fR so that the responding
+hosts appear in the local ARP table, dumps the ARP and routing tables,
+and then reports which hosts answered on each network.
+.PP
+Three networks are swept by default:
+.PP
+.RS
+.nf
+control  192.168.6.0/24
+data     192.168.7.0/24
+ipmi     192.168.157.0/24
+.fi
+.RE
+.PP
+Networks are given as \fIlabel\fB=\fIcidr\fR so the report can name
+them; a bare CIDR is accepted and labelled \fInetwork\fR.
+.PP
+The routing table is read with whichever tool is present: \fBip route
+show\fR, then \fBroute \-n\fR, then \fBnetstat \-rn\fR, so the script
+works on both Linux and macOS.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-N ", " \-\-networks " " \fILIST\fR
+Space- or comma-separated networks to sweep, each optionally
+\fIlabel\fB=\fIcidr\fR. Environment: \fBMU2EDAQ_NETWORKS\fR.
+.TP
+.BR \-o ", " \-\-output " " \fIDIR\fR
+Directory for the dumps. Environment:
+\fBMU2EDAQ_NETVERIFY_DIR\fR. Default: the current directory.
+.TP
+.BR \-s ", " \-\-skip\-scan
+Do not run \fBnmap\fR; report from the ARP table as it already stands.
+This makes the command safe to run when a scan is unwelcome, and
+removes the \fBnmap\fR dependency.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print what would be done and write nothing. Requires no tools at all.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B DAQ_NETWORK_VERIFY_SH_OPTS
+Extra options, prepended to the command line.
+.SH FILES
+Written into the output directory:
+.TP
+.I arp_table.txt
+The full sorted ARP table.
+.TP
+.I routing_table.txt
+The routing table.
+.TP
+.I filtered_arp_table.txt
+Only the ARP entries belonging to the swept networks.
+.SH NOTES
+Sweeping a /24 takes a few seconds per network. \fBnmap\fR is required
+unless \fB\-\-skip\-scan\fR or \fB\-\-dry\-run\fR is given.
+.SH EXIT STATUS
+Returns 0 when the sweep and report completed, 1 when \fBnmap\fR is
+needed but missing or no networks were given, and 2 for an
+unrecognised option.
+.SH EXAMPLES
+Sweep the standard networks into \fI/tmp\fR:
+.PP
+.RS
+.nf
+daq-network-verify.sh -o /tmp
+.fi
+.RE
+.PP
+Report from the existing ARP table without scanning:
+.PP
+.RS
+.nf
+daq-network-verify.sh --skip-scan
+.fi
+.RE
+.PP
+Check one extra network:
+.PP
+.RS
+.nf
+daq-network-verify.sh -N "mgmt=10.1.0.0/24"
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-cluster-cp (1),
+.BR daq-status.sh (1),
+.BR nmap (1),
+.BR arp (8)

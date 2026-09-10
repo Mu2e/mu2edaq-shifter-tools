@@ -1,0 +1,101 @@
+.TH SETUP-ONLINE.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+setup-online.sh \- set up the shell for one DAQ environment
+.SH SYNOPSIS
+.B source setup-online.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+[\fB\-e\fR \fIenvironment\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B setup-online.sh
+prepares the current shell to run \fBots\fR for one environment of one
+partition. It:
+.IP 1. 4
+obtains Kerberos credentials and exports \fBKRB5_PRINCIPAL\fR by
+sourcing
+.BR get_krb_principal.sh (1);
+.IP 2. 4
+configures the git/GitHub environment from that principal by sourcing
+.BR set_git_env.sh (1),
+after which the shell can reach GitHub;
+.IP 3. 4
+looks the environment's test release directory and setup command out of
+the operations YAML;
+.IP 4. 4
+changes into that directory and sources the setup command.
+.PP
+.B This script must be sourced, not executed.
+It changes the working directory and defines the ots environment in the
+calling shell, neither of which survives a subprocess. The login
+aliases installed by
+.BR install-login.sh (1)
+define \fBsetup_online\fR and \fBsetup\-online\fR as
+\fBsource $HOME/bin/setup-online.sh\fR for this reason.
+.PP
+With no \fB\-e\fR the partition's first active environment is used, and
+the choice is printed, so a single-environment partition needs no
+arguments.
+.PP
+A missing test release directory is reported along with the
+.BR create-environment.sh (1)
+command that would create it.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition to set up. Environment: \fBMU2EDAQ_PARTITION\fR. Default:
+\fIpartition_0\fR.
+.TP
+.BR \-e ", " \-\-environment " " \fINAME\fR
+Environment to set up. Environment: \fBMU2EDAQ_ENVIRONMENT\fR.
+Default: the partition's first active environment.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the credential, cd and source steps that would be taken, and
+change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and return.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B SETUP_ONLINE_SH_OPTS
+Extra options, prepended to the command line.
+.SH NOTES
+The script unsets all of its own variables before returning, so the ots
+environment is the only thing it leaves behind in the caller's shell.
+.SH EXIT STATUS
+Returns 0 on success, 1 if the configuration or the test release
+directory could not be resolved, and 2 for an unrecognised option.
+Because the script is sourced, this is the return status of the
+\fBsource\fR command rather than a process exit status.
+.SH EXAMPLES
+Set up the tracker environment:
+.PP
+.RS
+.nf
+source setup-online.sh -z partition_0 -e tracker
+.fi
+.RE
+.PP
+Or, with the login aliases installed:
+.PP
+.RS
+.nf
+setup_online -e trigger
+.fi
+.RE
+.SH SEE ALSO
+.BR start-daq.sh (1),
+.BR create-environment.sh (1),
+.BR get_krb_principal.sh (1),
+.BR set_git_env.sh (1),
+.BR daq-read-config (1)

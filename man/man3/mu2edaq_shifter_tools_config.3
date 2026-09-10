@@ -1,0 +1,205 @@
+.TH MU2EDAQ_SHIFTER_TOOLS_CONFIG 3 "2026-09-10" "mu2edaq-shifter-tools" "Library Functions"
+.SH NAME
+mu2edaq_shifter_tools.config \- configuration discovery, loading and precedence
+.SH SYNOPSIS
+.nf
+.B from mu2edaq_shifter_tools import config as cfg
+.B from mu2edaq_shifter_tools.config import Operations, ConfigError
+.fi
+.SH DESCRIPTION
+This module centralises every configuration decision the toolkit makes.
+Its counterpart on the shell side is
+.BR daq-common.sh (3),
+and the two implement the same precedence and the same search path so
+that a shell command and a Python command resolve a setting
+identically.
+.SH PRECEDENCE
+Every setting resolves as
+.PP
+.RS
+command line > environment > .env > config file > default
+.RE
+.PP
+.BR resolve ()
+implements exactly that and is what the command line tools feed their
+parsed options into.
+.SH FUNCTIONS
+.SS Precedence
+.TP
+.BI resolve( "cli=None, env_var=None, dotenv=None, config=None, config_key=None, default=None, environ=None" )
+Return the first tier that supplies a value. \fIcli\fR is the parsed
+option, or \fBNone\fR when it was not given. \fIenv_var\fR names an
+environment variable, consulted in \fIenviron\fR (default
+\fBos.environ\fR, injectable for tests). \fIconfig_key\fR is a dotted
+path into \fIconfig\fR.
+.IP
+An empty environment value is treated as absent, so an
+exported-but-empty variable does not mask the lower tiers. A falsey
+\fIcli\fR value such as \fB0\fR is respected, since zero is a
+legitimate port offset.
+.SS Locations
+.TP
+.BI repo_root()
+The installation root: \fB$MU2EDAQ_ROOT\fR if set, else the first
+ancestor of the package containing
+\fIconfig/daq\-operations.example.yaml\fR, else
+\fI~/daq\-shifter\-tools\fR.
+.TP
+.BI config_search_path()
+The directories searched for config files, in order, de-duplicated:
+\fB$MU2EDAQ_CONFIG_DIR\fR, \fI./config\fR, \fI<root>/config\fR,
+\fI~/.config/mu2edaq\fR, \fI/etc/mu2edaq\fR.
+.TP
+.BI find_config_file( "name, explicit=None" )
+Locate a config file by name. \fIexplicit\fR is used as-is with
+\fB~\fR expanded and is required to exist. Raises \fBConfigError\fR
+naming the whole search path when nothing is found.
+.TP
+.BI data_dir()
+The static data directory: \fB$MU2EDAQ_DATA_DIR\fR or
+\fI<root>/data\fR.
+.TP
+.BI data_file( "name" )
+Path to a data file, e.g. \fBdaq_nodes.json\fR. Raises
+\fBConfigError\fR if absent.
+.SS Loading
+.TP
+.BI load_config( "path" )
+Load a YAML file and require a mapping at the top level. JSON loads
+too, being a subset of YAML. An empty file yields \fB{}\fR.
+.TP
+.BI dotenv_files( "explicit=None" )
+The \fI.env\fR files to read, highest precedence first:
+\fB$MU2EDAQ_DOTENV\fR, \fI~/.mu2edaq/env\fR, \fI<root>/.env\fR,
+\fI./.env\fR. Only existing files are returned.
+.TP
+.BI find_dotenv( "explicit=None" )
+The highest-precedence \fI.env\fR file, or \fBNone\fR.
+.TP
+.BI load_dotenv( "explicit=None" )
+Parse every file from \fBdotenv_files()\fR into one dict, with an
+earlier file's value winning. Lines may carry an \fBexport\fR prefix
+and one layer of matching quotes; blanks, comments and non-identifier
+keys are ignored.
+.IP
+This deliberately does
+.B not
+touch \fBos.environ\fR. The caller passes the result to
+\fBresolve()\fR, which ranks it below the real environment; mutating
+the environment would invert that.
+.TP
+.BI load_tunnels( "explicit=None" )
+Load the tunnel definitions, accepting either a bare list or a mapping
+with a \fBtunnels:\fR key. Each entry must carry \fBhostname\fR and
+\fBport\fR.
+.SH CLASSES
+.SS Operations
+Typed accessors over the operations configuration.
+.TP
+.BI Operations.load( "explicit=None" )
+Classmethod. Locate and load the operations YAML, honouring
+\fB$MU2EDAQ_CONFIG\fR and then the \fI.env\fR files.
+.TP
+.BI Operations( "data, path=None" )
+Wrap an already-parsed mapping, which is what the tests do.
+.PP
+Instance attributes and methods:
+.TP
+.B path
+The file the configuration came from, or \fBNone\fR.
+.TP
+.B data
+The parsed configuration as a plain dict.
+.TP
+.BI partitions()
+Configured partition names.
+.TP
+.BI partition( "name" )
+One partition's configuration. Raises \fBConfigError\fR listing the
+known names.
+.TP
+.BI environments( "partition" )
+Every environment defined in a partition.
+.TP
+.BI environment( "partition, name" )
+One environment's configuration. Raises \fBConfigError\fR listing the
+known names.
+.TP
+.BI active_environments( "partition" )
+The partition's \fBactive_environments\fR, defaulting to every defined
+environment when the key is absent. A bare string is accepted as a
+one-element list.
+.TP
+.BI base_release( "partition" )
+The partition's base release path.
+.TP
+.BI test_rel_path( "partition, environment" )
+The environment's test release directory.
+.TP
+.BI setup_cmd( "partition, environment" )
+The environment's setup command, arguments included.
+.TP
+.BI ots_port_offset( "partition" )
+The partition-wide ots port offset; 0 if unset.
+.TP
+.BI port_offset( "partition, environment" )
+The environment's offset within its partition; 0 if unset.
+.TP
+.BI gateway_port( "partition, environment" )
+\fBots_port_offset\fR + \fBport_offset\fR, which is how ots derives the
+port.
+.TP
+.BI resource_manager_port()
+The ResourceManager port; 1973 if unset, Mu2e being E-973.
+.SH EXCEPTIONS
+.TP
+.B ConfigError
+Raised for missing, unreadable or inconsistent configuration. Messages
+name the file and, where a lookup failed, the values that were
+available. The command line tools catch it and exit 1 with the message
+on stderr.
+.SH CONSTANTS
+.TP
+.B OPERATIONS_CONFIG
+\fI"daq\-operations.yaml"\fR.
+.TP
+.B TUNNELS_CONFIG
+\fI"tunnels.yaml"\fR.
+.TP
+.B ENV_PREFIX
+\fI"MU2EDAQ_"\fR, the prefix of every variable the toolkit reads.
+.TP
+.B ROOT_MARKER
+\fIconfig/daq\-operations.example.yaml\fR, the file that identifies an
+installation root.
+.SH EXAMPLES
+Resolve a setting with the standard precedence:
+.PP
+.RS
+.nf
+from mu2edaq_shifter_tools import config as cfg
+
+dotenv = cfg.load_dotenv()
+partition = cfg.resolve(
+    cli=args.partition,
+    env_var=cfg.ENV_PREFIX + "PARTITION",
+    dotenv=dotenv,
+    default="partition_0",
+)
+.fi
+.RE
+.PP
+Handle a configuration problem the way the commands do:
+.PP
+.RS
+.nf
+try:
+    ops = cfg.Operations.load()
+except cfg.ConfigError as exc:
+    sys.exit(f"my-tool: {exc}")
+.fi
+.RE
+.SH SEE ALSO
+.BR mu2edaq_shifter_tools (3),
+.BR daq-common.sh (3),
+.BR daq-read-config (1)

@@ -28,6 +28,11 @@
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] && return 0
 _DAQ_COMMON_SH_LOADED=1
 
+# Directory this library was loaded from. In a CMake install the daq-*
+# console scripts are its siblings in <prefix>/bin, so daq_run_tool looks
+# here before falling back to PATH.
+_DAQ_COMMON_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
 # --- diagnostics ---------------------------------------------------------
 
 daq_warn() { printf '%s: %s\n' "${DAQ_PROG:-daq}" "$*" >&2; }
@@ -219,6 +224,8 @@ daq_run_tool() {
 
     if [ -x "$root/venv/bin/$console" ]; then
         "$root/venv/bin/$console" "$@"
+    elif [ -x "${_DAQ_COMMON_DIR:-}/$console" ]; then
+        "$_DAQ_COMMON_DIR/$console" "$@"
     elif command -v "$console" >/dev/null 2>&1; then
         "$console" "$@"
     else

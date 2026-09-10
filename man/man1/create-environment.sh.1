@@ -1,0 +1,108 @@
+.TH CREATE-ENVIRONMENT.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+create-environment.sh \- create or update a DAQ spack test release
+.SH SYNOPSIS
+.B create-environment.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+\fB\-e\fR \fIenvironment\fR
+[\fB\-u\fR]
+[\fB\-b\fR \fIref\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B create-environment.sh
+materialises the spack test release that one DAQ environment needs.
+The target directory is the environment's \fBtest_rel_path\fR in the
+operations YAML.
+.PP
+If that directory does not exist, the script creates it, downloads
+\fBmu2e\-quick\-spack\-start.sh\fR from the \fBMu2e/otsdaq\-mu2e\fR
+repository, and runs it with \fB\-\-develop \-\-upstream\fR pointed at
+the partition's \fBbase_release\fR.
+.PP
+If the directory already exists, the helper already inside it is re-run
+with \fB\-\-develop\fR to update the release in place. A directory that
+exists but has no helper in it is reported as an error rather than
+being re-populated, since that usually means a partial or hand-made
+release; remove it to have it rebuilt.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition owning the environment. Environment:
+\fBMU2EDAQ_PARTITION\fR. Default: \fIpartition_0\fR.
+.TP
+.BR \-e ", " \-\-environment " " \fINAME\fR
+Environment to create. Required. Environment:
+\fBMU2EDAQ_ENVIRONMENT\fR.
+.TP
+.BR \-u ", " \-\-update\-only
+Refuse to create a missing test release; only update an existing one.
+.TP
+.BR \-b ", " \-\-branch " " \fIREF\fR
+Git ref of \fBMu2e/otsdaq\-mu2e\fR to fetch the spack quick-start
+helper from. Environment: \fBMU2EDAQ_OTSDAQ_REF\fR. Default:
+\fIdevelop\fR.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the commands that would run and change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B CREATE_ENVIRONMENT_SH_OPTS
+Extra options, prepended to the command line.
+.SH NOTES
+Building a release takes a long time and needs network access to
+GitHub and to the spack upstream. Run it before a shift, not during
+one.
+.SH EXIT STATUS
+.TP
+.B 0
+The release was created or updated, or the dry run completed.
+.TP
+.B 1
+The configuration could not be read, no \fBtest_rel_path\fR or
+\fBbase_release\fR is configured, the directory is missing under
+\fB\-\-update\-only\fR, or the download or spack helper failed.
+.TP
+.B 2
+An environment was not given, or an option was not recognised.
+.SH EXAMPLES
+Create the tracker test release:
+.PP
+.RS
+.nf
+create-environment.sh -z partition_0 -e tracker
+.fi
+.RE
+.PP
+Update it later without ever creating one:
+.PP
+.RS
+.nf
+create-environment.sh -z partition_0 -e tracker --update-only
+.fi
+.RE
+.PP
+Build against a branch of otsdaq-mu2e:
+.PP
+.RS
+.nf
+create-environment.sh -z partition_0 -e tracker -b my-feature-branch
+.fi
+.RE
+.SH SEE ALSO
+.BR setup-online.sh (1),
+.BR start-daq.sh (1),
+.BR daq-read-config (1),
+.BR daq-install-tools (1)

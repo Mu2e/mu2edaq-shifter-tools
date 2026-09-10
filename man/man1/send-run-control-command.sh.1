@@ -1,0 +1,102 @@
+.TH SEND-RUN-CONTROL-COMMAND.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+send-run-control-command.sh \- send a run-control state transition (not implemented)
+.SH SYNOPSIS
+.B send-run-control-command.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+\fB\-e\fR \fIenvironment\fR
+[\fB\-H\fR \fIhost\fR]
+[\fB\-n\fR]
+\fIcommand\fR
+.SH DESCRIPTION
+.B send-run-control-command.sh
+is intended to drive otsdaq run-control state transitions from the
+command line, by sending a UDP datagram to the gateway supervisor of
+one DAQ environment.
+.SH STATUS
+.B This command is not implemented.
+.PP
+Its option handling, configuration resolution and target-port
+calculation are complete and covered by the test suite, but the wire
+format of the otsdaq run-control UDP message has not been transcribed,
+so no datagram is ever sent. Invoking it prints the resolved target
+and exits 3.
+.PP
+Drive state transitions from the otsdaq web GUI instead, reachable
+through the port forwards opened by
+.BR daq-tunnels.sh (1).
+.PP
+The implementation notes at the end of the script record what remains
+to be done: read the UDP listener in the otsdaq gateway supervisor,
+transcribe the payload, and send it to the already-resolved host and
+port.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition owning the environment. Environment:
+\fBMU2EDAQ_PARTITION\fR. Default: \fIpartition_0\fR.
+.TP
+.BR \-e ", " \-\-environment " " \fINAME\fR
+Target environment. Required. Environment:
+\fBMU2EDAQ_ENVIRONMENT\fR.
+.TP
+.BR \-H ", " \-\-host " " \fIHOST\fR
+Gateway host to address. Environment: \fBMU2EDAQ_RC_HOST\fR. Default:
+\fIlocalhost\fR, which is what a forwarded port looks like.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the resolved target and exit 0 without attempting to send.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH COMMANDS
+.B init configure start stop pause resume halt
+.PP
+Any other verb is rejected before the target is resolved.
+.SH TARGET PORT
+The port is the partition's \fBots_port_offset\fR plus the
+environment's \fBport_offset\fR, which is how ots itself derives it.
+The same number is available as
+.PP
+.RS
+.nf
+daq-read-config -z \fIpartition\fR -e \fIenvironment\fR gateway-port
+.fi
+.RE
+.SH ENVIRONMENT
+.TP
+.B SEND_RUN_CONTROL_COMMAND_SH_OPTS
+Extra options, prepended to the command line.
+.SH EXIT STATUS
+.TP
+.B 0
+A dry run completed.
+.TP
+.B 1
+The configuration could not be read, or the port could not be
+computed.
+.TP
+.B 2
+No environment or command was given, or an option was not recognised.
+.TP
+.B 3
+The command is not implemented. This is the status of every real
+invocation.
+.SH EXAMPLES
+Check which host and port a transition would target:
+.PP
+.RS
+.nf
+send-run-control-command.sh -z partition_0 -e tracker -n start
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-tunnels.sh (1),
+.BR daq-read-config (1),
+.BR daq-status.sh (1)

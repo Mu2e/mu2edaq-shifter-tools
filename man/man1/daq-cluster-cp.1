@@ -1,0 +1,127 @@
+.TH DAQ-CLUSTER-CP 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-cluster-cp \- copy files to many DAQ cluster nodes in parallel
+.SH SYNOPSIS
+.B daq-cluster-cp
+[\fB\-d\fR]
+[\fB\-t\fR]
+[\fB\-C\fR]
+[\fB\-c\fR]
+[\fB\-a\fR]
+[\fB\-u\fR \fIuser\fR]
+[\fB\-j\fR \fIjobs\fR]
+[\fB\-v\fR]
+[\fB\-n\fR]
+\fIfile\fR...
+\fIdestination\fR
+.SH DESCRIPTION
+.B daq-cluster-cp
+copies one or more files to the same destination path on every selected
+node of the DAQ cluster, running the copies in parallel over a thread
+pool.
+.PP
+All of the files go in a single \fBscp\fR invocation per host, so there
+is one ssh handshake per host rather than one per file.
+.PP
+The node inventory is read from \fIdata/daq_nodes.json\fR, which groups
+hosts by subsystem. A host appearing in more than one group is copied
+to once; the host order follows the group order
+\fBdaq\fR, \fBtrk\fR, \fBcrv\fR, \fBcalo\fR so that output is stable
+between runs.
+.PP
+Selecting no group is the same as \fB\-\-all\fR.
+.PP
+Every source file is checked for existence before any connection is
+made, so a typo fails immediately rather than after a hundred scp
+failures.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-d ", " \-\-daq
+Copy to the \fBdaq\fR nodes.
+.TP
+.BR \-t ", " \-\-trk
+Copy to the tracker nodes.
+.TP
+.BR \-C ", " \-\-crv
+Copy to the CRV nodes.
+.TP
+.BR \-c ", " \-\-calo
+Copy to the calorimeter nodes.
+.TP
+.BR \-a ", " \-\-all
+Copy to every node in the inventory.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+SSH username. Environment: \fBMU2EDAQ_CLUSTER_USER\fR. Default: the
+local \fB$USER\fR.
+.TP
+.B \-\-nodes\-file " " \fIFILE\fR
+Alternative node inventory. Default: \fIdaq_nodes.json\fR from the data
+directory.
+.TP
+.BR \-j ", " \-\-jobs " " \fIN\fR
+Number of copies to run at once. Environment:
+\fBMU2EDAQ_CLUSTER_JOBS\fR. Default: \fI16\fR.
+.TP
+.BR \-v ", " \-\-verbose
+List the selected hosts and report each successful copy, not only the
+failures.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the scp command lines and copy nothing.
+.TP
+.B \-\-version
+Print the package version and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH FILES
+.TP
+.I data/daq_nodes.json
+Node inventory, an object mapping group name to a list of hostnames.
+Located through \fBMU2EDAQ_DATA_DIR\fR or the installation root.
+.SH EXIT STATUS
+.TP
+.B 0
+Every host succeeded, or the dry run completed.
+.TP
+.B 1
+At least one host failed, no hosts were selected, or the inventory
+could not be read. A per-host failure count is printed on stderr.
+.TP
+.B 2
+A named source file does not exist.
+.SH NOTES
+\fBscp\fR runs with \fB\-B\fR (batch mode), so it never prompts. Make
+sure Kerberos or agent authentication is working first, or every host
+will fail at once.
+.SH EXAMPLES
+Push a configuration file to the tracker nodes:
+.PP
+.RS
+.nf
+daq-cluster-cp -t -u mu2edaq tracker.fcl /home/mu2edaq/config/
+.fi
+.RE
+.PP
+Check what would happen first:
+.PP
+.RS
+.nf
+daq-cluster-cp -n -a tracker.fcl /home/mu2edaq/config/
+.fi
+.RE
+.PP
+Push several files everywhere, eight at a time, reporting each:
+.PP
+.RS
+.nf
+daq-cluster-cp -a -j 8 -v a.fcl b.fcl /home/mu2edaq/config/
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-network-verify.sh (1),
+.BR daq-ls2json (1),
+.BR scp (1)

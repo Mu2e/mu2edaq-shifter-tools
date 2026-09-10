@@ -30,6 +30,13 @@ project(mu2edaq-shifter-tools
         DESCRIPTION "Operator utilities for running the Mu2e DAQ system"
         LANGUAGES NONE)
 
+# GNUInstallDirs cannot derive CMAKE_INSTALL_LIBDIR with LANGUAGES NONE,
+# because no target architecture is known. Nothing here installs a
+# library, so set it explicitly rather than take the developer warning.
+if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+    set(CMAKE_INSTALL_LIBDIR "lib")
+endif()
+
 include(GNUInstallDirs)
 include(CTest)
 
@@ -152,6 +159,25 @@ if(MU2EDAQ_INSTALL_PYTHON AND Python3_FOUND)
 endif()
 
 # --------------------------------------------------------------------------
+# Environment script
+# --------------------------------------------------------------------------
+
+# "pip install --prefix" puts the package in
+# <prefix>/lib/pythonX.Y/site-packages, which is not on a system
+# interpreter's sys.path. The generated env script exports the PYTHONPATH
+# that makes the installed console scripts importable, alongside PATH,
+# MANPATH and MU2EDAQ_ROOT.
+if(Python3_FOUND)
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/mu2edaq-env.sh.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/mu2edaq-env.sh"
+        @ONLY)
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/mu2edaq-env.sh"
+            DESTINATION "${MU2EDAQ_SHAREDIR}"
+            COMPONENT config)
+endif()
+
+# --------------------------------------------------------------------------
 # Man pages
 # --------------------------------------------------------------------------
 
@@ -200,13 +226,37 @@ install(FILES README.md LICENSE
 # --------------------------------------------------------------------------
 
 if(BUILD_TESTING AND Python3_FOUND)
-    # Unit tests for the Python package.
-    add_test(NAME pytest
-             COMMAND "${Python3_EXECUTABLE}" -m pytest
-                     "${CMAKE_CURRENT_SOURCE_DIR}/tests"
-             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
-    set_tests_properties(pytest PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/src")
+    # Prefer the project venv, which is where bootstrap.sh puts pytest and
+    # the dependencies. A system interpreter found by find_package rarely
+    # has either.
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python")
+        set(MU2EDAQ_TEST_PYTHON "${CMAKE_CURRENT_SOURCE_DIR}/venv/bin/python")
+    else()
+        set(MU2EDAQ_TEST_PYTHON "${Python3_EXECUTABLE}")
+    endif()
+
+    # Only register the suite if it can actually run, so a checkout that
+    # has not been bootstrapped reports "not built" rather than a failure
+    # that looks like a broken test.
+    execute_process(
+        COMMAND "${MU2EDAQ_TEST_PYTHON}" -c "import pytest, yaml, click"
+        RESULT_VARIABLE MU2EDAQ_TEST_DEPS
+        OUTPUT_QUIET ERROR_QUIET)
+
+    if(MU2EDAQ_TEST_DEPS EQUAL 0)
+        add_test(NAME pytest
+                 COMMAND "${MU2EDAQ_TEST_PYTHON}" -m pytest
+                         "${CMAKE_CURRENT_SOURCE_DIR}/tests"
+                 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+        set_tests_properties(pytest PROPERTIES
+            ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/src")
+    else()
+        message(STATUS
+            "pytest/PyYAML/click not importable with ${MU2EDAQ_TEST_PYTHON}; "
+            "the Python test suite is not registered. Run "
+            "'cmake --build <dir> --target venv' (or ./bootstrap.sh --dev) "
+            "and re-configure.")
+    endif()
 
     # Syntax-check every shell script; catches the kind of quoting bug
     # that only shows up in the control room otherwise.
@@ -231,5 +281,11 @@ message(STATUS "  install prefix : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  shell tools    : ${MU2EDAQ_INSTALL_SHELL_TOOLS}")
 message(STATUS "  python package : ${MU2EDAQ_INSTALL_PYTHON}")
 message(STATUS "  Qt GUI extra   : ${MU2EDAQ_WITH_GUI}")
+if(DEFINED MU2EDAQ_TEST_PYTHON)
+    message(STATUS "  test python    : ${MU2EDAQ_TEST_PYTHON}")
+endif()
 message(STATUS "  share dir      : ${CMAKE_INSTALL_PREFIX}/${MU2EDAQ_SHAREDIR}")
+message(STATUS "")
+message(STATUS "  After 'cmake --install', set up the environment with:")
+message(STATUS "    source ${CMAKE_INSTALL_PREFIX}/${MU2EDAQ_SHAREDIR}/mu2edaq-env.sh")
 message(STATUS "")
