@@ -55,6 +55,7 @@ _sge_main() {
         local here
         here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
         for lib in "$here/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+            # shellcheck source=scripts/daq-common.sh
             [ -f "$lib" ] && { . "$lib"; break; }
         done
     fi
@@ -107,4 +108,7 @@ _sge_main() {
 _sge_main "$@"
 _sge_status=$?
 unset -f _sge_main
+# Sourced scripts return; executed ones exit. Only one branch runs,
+# so the other is not really unreachable.
+# shellcheck disable=SC2317
 return "$_sge_status" 2>/dev/null || exit "$_sge_status"

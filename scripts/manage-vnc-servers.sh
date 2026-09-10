@@ -118,5 +118,8 @@ for p in "${port_list[@]}"; do
     remote_script+="if systemctl $action vncserver@:$p.service; then echo ':$p -> OK'; else echo ':$p -> FAILED'; fi; "
 done
 
+# $remote_script is assembled locally on purpose: the port list and the
+# action are local values, and the remote end just runs the result.
+# shellcheck disable=SC2029
 ssh "$user@$host" "$remote_script"
 exit $?

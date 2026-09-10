@@ -35,6 +35,7 @@ set -u
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for lib in "$SCRIPT_DIR/daq-common.sh" "$SCRIPT_DIR/scripts/daq-common.sh" \
            "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$lib" ] && { . "$lib"; break; }
 done
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
@@ -70,6 +71,9 @@ send-run-control-command.sh(1). Use the otsdaq web GUI instead.
 "
 
 # Options may also be supplied via $SEND_RUN_CONTROL_COMMAND_SH_OPTS.
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts send-run-control-command.sh) '"$@"'
 
 command_verb=""

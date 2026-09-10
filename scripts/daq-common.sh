@@ -87,6 +87,11 @@ daq_repo_root() {
 #
 # ~/.mu2edaq/env is where install-login.sh records MU2EDAQ_ROOT, so the
 # commands installed into ~/bin can find their config and data.
+#
+# The file argument is optional and every caller omits it. A function
+# called with no arguments does not inherit the caller's positional
+# parameters in bash, so ${1:-} is correctly empty here.
+# shellcheck disable=SC2120
 daq_load_dotenv() {
     local files=""
     if [ -n "${1:-}" ]; then
@@ -157,6 +162,10 @@ daq_config_file() {
         # by the shell, and this was a long-standing bug in the old
         # scripts, whose default config path was the literal string
         # "~/daq-shifter-tools/daq-operations.yaml".
+        # The "~/" here is a literal glob pattern being matched, not an
+        # expansion; and the pattern in ${var#'~/'} must stay quoted or
+        # bash tilde-expands the pattern itself.
+        # shellcheck disable=SC2088
         case "$explicit" in "~/"*) explicit="$HOME/${explicit#'~/'}";; esac
         if [ -f "$explicit" ]; then
             printf '%s\n' "$explicit"

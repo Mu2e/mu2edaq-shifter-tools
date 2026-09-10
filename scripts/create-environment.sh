@@ -28,6 +28,7 @@ set -u
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for lib in "$SCRIPT_DIR/daq-common.sh" "$SCRIPT_DIR/scripts/daq-common.sh" \
            "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$lib" ] && { . "$lib"; break; }
 done
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
@@ -60,6 +61,9 @@ Create or update the spack test release for one DAQ environment.
 "
 
 # Options may also be supplied via $CREATE_ENVIRONMENT_SH_OPTS.
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts create-environment.sh) '"$@"'
 
 while [ -n "${1:-}" ]; do

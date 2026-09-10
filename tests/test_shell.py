@@ -8,6 +8,7 @@ daq-common.sh resolves configuration with the documented precedence.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -296,3 +297,70 @@ def test_install_login_dry_run_changes_nothing(tmp_path):
     assert result.returncode == 0, output
     assert not (tmp_path / "home").exists()
     assert not (tmp_path / "bin").exists()
+
+
+# --------------------------------------------------------------------------
+# Session and window naming
+#
+# start-daq.sh, stop-daq.sh and daq-status.sh must agree on the tmux
+# session and window names, since that agreement is what replaced the
+# fragile positional window indexing. A regression here is silent: the
+# commands report "nothing to stop" and leave the DAQ running.
+# --------------------------------------------------------------------------
+
+
+def test_stop_daq_resolves_the_full_session_name():
+    """Regression: shellcheck SC2318.
+
+    stop_partition() built the session name with
+    ``local target="$1" session="daq-$target"``. A variable assigned in a
+    'local' is not visible to a later assignment in that same 'local', so
+    session expanded to "daq-" and the command reported that there was
+    nothing to stop while ots kept running.
+    """
+    result = subprocess.run(
+        [str(REPO_ROOT / "stop-daq.sh"), "-n", "-y", "-z", "partition_0"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(REPO_ROOT),
+    )
+    output = result.stdout.decode()
+    if "tmux is not installed" in output:
+        pytest.skip("tmux is not available")
+    assert result.returncode == 0, output
+    assert "daq-partition_0" in output, output
+    # The truncated name must not appear as a whole session name.
+    assert "session daq-," not in output
+    assert "session daq- " not in output
+    assert "no tmux session daq-\n" not in output
+
+
+def test_start_and_stop_agree_on_window_names():
+    """The window names start-daq.sh creates are the ones stop-daq.sh targets."""
+    start = subprocess.run(
+        [str(REPO_ROOT / "start-daq.sh"), "-n", "-z", "partition_0"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(REPO_ROOT),
+    )
+    output = start.stdout.decode()
+    if "tmux is not installed" in output:
+        pytest.skip("tmux is not available")
+    assert start.returncode == 0, output
+
+    # start-daq.sh names each window daq-<partition>-<environment>.
+    windows = set(re.findall(r"daq-partition_0-[a-z]+", output))
+    assert windows, output
+
+    status = subprocess.run(
+        [str(REPO_ROOT / "scripts/daq-status.sh"), "-z", "partition_0"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(REPO_ROOT),
+    )
+    status_windows = set(
+        re.findall(r"daq-partition_0-[a-z]+", status.stdout.decode())
+    )
+    assert windows == status_windows, (
+        f"start-daq.sh builds {windows}, daq-status.sh looks for {status_windows}"
+    )

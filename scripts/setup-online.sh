@@ -32,10 +32,14 @@
 _so_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for _so_lib in "$_so_dir/daq-common.sh" "$_so_dir/scripts/daq-common.sh" \
                "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$_so_lib" ] && { . "$_so_lib"; break; }
 done
 if [ -z "${_DAQ_COMMON_SH_LOADED:-}" ]; then
     echo "setup-online.sh: cannot find daq-common.sh" >&2
+    # Sourced scripts return; executed ones exit. Only one branch runs,
+    # so the other is not really unreachable.
+    # shellcheck disable=SC2317
     return 1 2>/dev/null || exit 1
 fi
 
@@ -62,6 +66,9 @@ Source this script to set up one DAQ environment in the calling shell.
 "
 
 # Options may also be supplied via $SETUP_ONLINE_SH_OPTS.
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts setup-online.sh) '"$@"'
 
 while [ -n "${1:-}" ]; do
@@ -82,6 +89,9 @@ if [ "$_so_help" -eq 1 ]; then
     printf '%s' "$_so_usage"
     unset _so_dir _so_lib _so_config _so_partition _so_environment \
           _so_dry_run _so_help _so_usage
+    # Sourced scripts return; executed ones exit. Only one branch runs,
+    # so the other is not really unreachable.
+    # shellcheck disable=SC2317
     return "${_so_status:-0}" 2>/dev/null || exit "${_so_status:-0}"
 fi
 
@@ -90,7 +100,9 @@ fi
 # environment off the resulting principal. After this the shell can
 # reach GitHub.
 if [ "$_so_dry_run" -eq 0 ]; then
+    # shellcheck source=scripts/get_krb_principal.sh
     [ -f "$_so_dir/get_krb_principal.sh" ] && . "$_so_dir/get_krb_principal.sh"
+    # shellcheck source=scripts/set_git_env.sh
     [ -f "$_so_dir/set_git_env.sh" ]       && . "$_so_dir/set_git_env.sh"
 else
     echo "  + source $_so_dir/get_krb_principal.sh"
@@ -101,6 +113,9 @@ fi
 _so_config_file="$(daq_config_file daq-operations.yaml "$_so_config")" || {
     unset _so_dir _so_lib _so_config _so_partition _so_environment \
           _so_dry_run _so_help _so_usage _so_config_file
+    # Sourced scripts return; executed ones exit. Only one branch runs,
+    # so the other is not really unreachable.
+    # shellcheck disable=SC2317
     return 1 2>/dev/null || exit 1
 }
 
@@ -134,8 +149,10 @@ else
     cd "$_so_dir_target" || _so_status=1
     if [ "$_so_status" -eq 0 ]; then
         # setup_cmd may carry arguments (e.g. "setup_ots.sh tracker"),
-        # so it is deliberately left unquoted here.
+        # so it is deliberately left unquoted here. It lives in the test
+        # release, outside this repository, so it cannot be followed.
         # shellcheck disable=SC2086
+        # shellcheck source=/dev/null
         . $_so_setup_cmd
         _so_status=$?
     fi
@@ -145,4 +162,7 @@ fi
 # only thing that should persist.
 unset _so_dir _so_lib _so_config _so_partition _so_environment _so_dry_run \
       _so_help _so_usage _so_config_file _so_dir_target _so_setup_cmd
+# Sourced scripts return; executed ones exit. Only one branch runs,
+# so the other is not really unreachable.
+# shellcheck disable=SC2317
 return "${_so_status:-0}" 2>/dev/null || exit "${_so_status:-0}"

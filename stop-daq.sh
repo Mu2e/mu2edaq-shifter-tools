@@ -33,6 +33,7 @@ set -u
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for lib in "$SCRIPT_DIR/scripts/daq-common.sh" "$SCRIPT_DIR/daq-common.sh" \
            "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$lib" ] && { . "$lib"; break; }
 done
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
@@ -66,6 +67,9 @@ Stop the DAQ for one partition, or for all of them with -A.
 
 # Options may also be supplied via $STOP_DAQ_SH_OPTS (or the legacy
 # $KILL_DAQ_OPTS).
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts stop-daq.sh) '"$@"'
 
 while [ -n "${1:-}" ]; do
@@ -96,7 +100,12 @@ run() {
 }
 
 stop_partition() {
-    local target="$1" session="daq-$target" envs env window
+    # Two statements, deliberately: a variable assigned in a 'local' is
+    # not yet visible to a later assignment in that same 'local', so
+    # session="daq-$target" on one line would expand to just "daq-".
+    local target="$1"
+    local session="daq-$target"
+    local envs env window
     if ! tmux has-session -t "$session" 2>/dev/null; then
         echo "Partition $target: no tmux session $session, nothing to stop"
         return 0

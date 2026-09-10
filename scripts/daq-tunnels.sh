@@ -49,6 +49,7 @@ set -u
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for lib in "$SCRIPT_DIR/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$lib" ] && { . "$lib"; break; }
 done
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
@@ -102,6 +103,9 @@ Manage the SSH port forwards for the Mu2e shifter GUIs.
 "
 
 # Options may also be supplied via $DAQ_TUNNELS_SH_OPTS.
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts daq-tunnels.sh) '"$@"'
 
 while [ -n "${1:-}" ]; do
@@ -252,6 +256,9 @@ case "$action" in
         fi
         echo ""
         echo "ssh processes that look like Mu2e tunnels:"
+        # pgrep would print only pids; the operator needs the whole
+        # command line to see which forwards a process carries.
+        # shellcheck disable=SC2009
         ps aux | grep -E "ssh.*(mu2e|cfo|dl|dcs)" | grep -v grep \
             || echo "  none"
         echo ""
@@ -292,6 +299,7 @@ case "$action" in
         echo "Starting DAQ tunnels (offset=$offset, via ${jump:-none})..."
         describe_services "$daq_services"
 
+        daq_forwards=()
         read_forwards daq_forwards "$daq_services"
         if [ "$dry_run" -eq 1 ]; then
             echo "  + ssh -f -K -N -q -o ExitOnForwardFailure=yes" \
@@ -311,6 +319,7 @@ case "$action" in
         echo "Starting extra tunnels..."
         describe_services "$extra_services"
 
+        extra_forwards=()
         read_forwards extra_forwards "$extra_services"
         if [ "$dry_run" -eq 1 ]; then
             echo "  + ssh -f -K -N -q -o ExitOnForwardFailure=yes" \

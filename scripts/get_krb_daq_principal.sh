@@ -53,6 +53,7 @@ _gkdp_main() {
         local here lib
         here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
         for lib in "$here/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+            # shellcheck source=scripts/daq-common.sh
             [ -f "$lib" ] && { . "$lib"; break; }
         done
     fi
@@ -111,4 +112,7 @@ _gkdp_main "$@"
 _gkdp_rc=$?
 unset -f _gkdp_main
 # Propagate the status whether we were sourced (return) or run (exit).
-return $_gkdp_rc 2>/dev/null || exit $_gkdp_rc
+# Sourced scripts return; executed ones exit. Only one branch runs,
+# so the other is not really unreachable.
+# shellcheck disable=SC2317
+return "$_gkdp_rc" 2>/dev/null || exit "$_gkdp_rc"

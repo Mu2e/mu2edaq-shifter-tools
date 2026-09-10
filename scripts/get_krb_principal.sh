@@ -69,4 +69,7 @@ _gkp_main() {
 _gkp_main "$@"
 _gkp_status=$?
 unset -f _gkp_main
+# Sourced scripts return; executed ones exit. Only one branch runs,
+# so the other is not really unreachable.
+# shellcheck disable=SC2317
 return "$_gkp_status" 2>/dev/null || exit "$_gkp_status"

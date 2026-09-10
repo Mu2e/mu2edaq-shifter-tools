@@ -30,6 +30,7 @@ set -u
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 for lib in "$SCRIPT_DIR/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
     [ -f "$lib" ] && { . "$lib"; break; }
 done
 [ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
@@ -60,6 +61,9 @@ Sweep the DAQ private networks and report which hosts answered.
 "
 
 # Options may also be supplied via $DAQ_NETWORK_VERIFY_SH_OPTS.
+# The command substitution is deliberately unquoted: $<COMMAND>_OPTS
+# holds a list of options that must be split into separate words.
+# shellcheck disable=SC2046
 eval set -- $(daq_script_opts daq-network-verify.sh) '"$@"'
 
 while [ -n "${1:-}" ]; do
@@ -89,14 +93,9 @@ arp_table="$outdir/arp_table.txt"
 routing_table="$outdir/routing_table.txt"
 filtered="$outdir/filtered_arp_table.txt"
 
-run() {
-    echo "  + $*"
-    [ "$dry_run" -eq 1 ] && return 0
-    "$@"
-}
-
-# As run(), but discard the command's own output. The redirection has to
-# live inside the function so it does not also swallow the echo above.
+# Echo the command, then run it unless this is a dry run, discarding the
+# command's own output. The redirection lives inside the function so it
+# does not also swallow the echo.
 run_quiet() {
     echo "  + $*"
     [ "$dry_run" -eq 1 ] && return 0
