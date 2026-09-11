@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -55,8 +54,7 @@ def operations_config(tmp_path) -> Path:
     (config_dir / "daq-operations.example.yaml").write_text("partitions: {}\n")
 
     path = config_dir / "daq-operations.yaml"
-    path.write_text(
-        """
+    path.write_text("""
 partitions:
   partition_0:
     environments:
@@ -85,8 +83,7 @@ partitions:
     base_release: "/mu2e/releases/v9_01_00"
 
 resource_manager_port: 1973
-"""
-    )
+""")
     return path
 
 

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import click
 
@@ -43,9 +43,7 @@ VERBS: Dict[str, str] = {
 }
 
 #: Verbs that need --environment.
-ENV_VERBS = frozenset(
-    {"directory", "setup", "port-offset", "gateway-port"}
-)
+ENV_VERBS = frozenset({"directory", "setup", "port-offset", "gateway-port"})
 
 
 def _verb_help() -> str:
@@ -164,9 +162,14 @@ def main(
         # These two verbs answer questions about the search itself and so
         # must work even when no config file exists yet.
         if verb == "config-path":
-            _emit([str(p) for p in cfg.config_search_path()] if as_json
-                  else "\n".join(str(p) for p in cfg.config_search_path()),
-                  as_json)
+            _emit(
+                (
+                    [str(p) for p in cfg.config_search_path()]
+                    if as_json
+                    else "\n".join(str(p) for p in cfg.config_search_path())
+                ),
+                as_json,
+            )
             return
 
         ops = cfg.Operations.load(config_file)

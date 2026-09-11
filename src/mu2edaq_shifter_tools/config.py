@@ -407,9 +407,7 @@ class Operations:
         """Return an environment's setup command."""
         value = self.environment(partition, environment).get("setup_cmd")
         if not value:
-            raise ConfigError(
-                f"no setup_cmd configured for {partition}/{environment}"
-            )
+            raise ConfigError(f"no setup_cmd configured for {partition}/{environment}")
         return str(value)
 
     def ots_port_offset(self, partition: str) -> int:
@@ -418,9 +416,7 @@ class Operations:
 
     def port_offset(self, partition: str, environment: str) -> int:
         """Return an environment's port offset within its partition."""
-        return int(
-            self.environment(partition, environment).get("port_offset", 0) or 0
-        )
+        return int(self.environment(partition, environment).get("port_offset", 0) or 0)
 
     def gateway_port(self, partition: str, environment: str) -> int:
         """Return an environment's gateway port.
@@ -470,8 +466,6 @@ def load_tunnels(explicit: Optional[str] = None) -> List[Dict[str, Any]]:
             raise ConfigError(f"{path}: tunnel {index} is not a mapping")
         missing = [k for k in ("hostname", "port") if k not in entry]
         if missing:
-            raise ConfigError(
-                f"{path}: tunnel {index} is missing {', '.join(missing)}"
-            )
+            raise ConfigError(f"{path}: tunnel {index} is missing {', '.join(missing)}")
         tunnels.append(dict(entry))
     return tunnels

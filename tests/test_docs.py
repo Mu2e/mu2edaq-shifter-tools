@@ -113,9 +113,9 @@ def test_man_page_name_line_matches_the_filename(page):
     # documents "mu2edaq_shifter_tools.config", so compare with "." and
     # "_" treated alike.
     documented = name_line.split()[0].replace(".", "_")
-    assert documented == page.stem.replace(".", "_"), (
-        f"{page.name}: NAME section says {name_line!r}"
-    )
+    assert documented == page.stem.replace(
+        ".", "_"
+    ), f"{page.name}: NAME section says {name_line!r}"
 
 
 @pytest.mark.parametrize(
@@ -124,9 +124,9 @@ def test_man_page_name_line_matches_the_filename(page):
 def test_man_page_th_section_matches_the_directory(page):
     header = page.read_text().splitlines()[0]
     section = header.split()[2].strip('"')
-    assert section == page.suffix.lstrip("."), (
-        f"{page.name}: .TH declares section {section}"
-    )
+    assert section == page.suffix.lstrip(
+        "."
+    ), f"{page.name}: .TH declares section {section}"
 
 
 @pytest.mark.skipif(MAN is None, reason="man is not available")
@@ -187,3 +187,52 @@ def test_env_example_documents_every_variable_the_code_reads():
     }
     missing = sorted(v for v in referenced - ignore if v not in example)
     assert not missing, f"undocumented in .env.example: {missing}"
+
+
+# --------------------------------------------------------------------------
+# roff correctness
+#
+# groff renders a malformed page without complaint, so these failures are
+# silent: the reader simply never sees the line. mandoc reports them.
+# --------------------------------------------------------------------------
+
+MANDOC = shutil.which("mandoc")
+
+
+@pytest.mark.skipif(MANDOC is None, reason="mandoc is not available")
+@pytest.mark.parametrize(
+    "page", sorted(MAN1.glob("*.1")) + sorted(MAN3.glob("*.3")), ids=lambda p: p.name
+)
+def test_man_page_passes_mandoc_lint(page):
+    """No ERROR- or WARNING-level roff problems."""
+    result = subprocess.run(
+        [MANDOC, "-T", "lint", str(page)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    problems = [
+        line
+        for line in result.stdout.decode().splitlines()
+        if "ERROR:" in line or "WARNING:" in line
+    ]
+    assert not problems, "\n".join(problems)
+
+
+@pytest.mark.parametrize(
+    "page", sorted(MAN1.glob("*.1")) + sorted(MAN3.glob("*.3")), ids=lambda p: p.name
+)
+def test_example_lines_are_not_swallowed_by_roff(page):
+    """A line starting with a dot or an apostrophe is a roff control line.
+
+    Regression: example commands written as "./bootstrap.sh --dev" were
+    parsed as unknown macros and dropped from the rendered page, so the
+    EXAMPLES section showed the surrounding lines but not the command
+    itself. groff reported nothing. The fix is a leading zero-width
+    escape.
+    """
+    offenders = [
+        (n, line)
+        for n, line in enumerate(page.read_text().splitlines(), 1)
+        if line.startswith("./") or line.startswith("'")
+    ]
+    assert not offenders, f"{page.name}: unescaped control lines {offenders}"

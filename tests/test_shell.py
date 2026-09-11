@@ -161,9 +161,7 @@ def test_config_file_expands_a_tilde_in_an_explicit_path(tmp_path):
 
 
 def test_config_file_reports_a_missing_explicit_path(tmp_path):
-    result = run_library(
-        f'daq_config_file daq-operations.yaml "{tmp_path}/nope.yaml"'
-    )
+    result = run_library(f'daq_config_file daq-operations.yaml "{tmp_path}/nope.yaml"')
     assert result.returncode != 0
     assert "not found" in result.stderr.decode()
 
@@ -193,9 +191,7 @@ def test_dotenv_supplies_unset_values(tmp_path):
 
 def test_dotenv_ignores_comments_and_junk(tmp_path):
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        "# comment\n\nnot-a-setting\nBAD-KEY=1\nMU2EDAQ_PARTITION=ok\n"
-    )
+    env_file.write_text("# comment\n\nnot-a-setting\nBAD-KEY=1\nMU2EDAQ_PARTITION=ok\n")
     result = run_library(
         'daq_load_dotenv; printf "%s" "$MU2EDAQ_PARTITION"',
         env={"MU2EDAQ_DOTENV": str(env_file)},
@@ -358,9 +354,7 @@ def test_start_and_stop_agree_on_window_names():
         stderr=subprocess.STDOUT,
         cwd=str(REPO_ROOT),
     )
-    status_windows = set(
-        re.findall(r"daq-partition_0-[a-z]+", status.stdout.decode())
-    )
-    assert windows == status_windows, (
-        f"start-daq.sh builds {windows}, daq-status.sh looks for {status_windows}"
-    )
+    status_windows = set(re.findall(r"daq-partition_0-[a-z]+", status.stdout.decode()))
+    assert (
+        windows == status_windows
+    ), f"start-daq.sh builds {windows}, daq-status.sh looks for {status_windows}"

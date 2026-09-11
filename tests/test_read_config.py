@@ -20,9 +20,7 @@ def run(operations_config):
     runner = CliRunner()
 
     def _run(*args, expect_success=True):
-        result = runner.invoke(
-            main, ["--config", str(operations_config), *args]
-        )
+        result = runner.invoke(main, ["--config", str(operations_config), *args])
         if expect_success:
             assert result.exit_code == 0, result.output
         return result

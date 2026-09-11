@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 
 import pytest
 
 from mu2edaq_shifter_tools import config as cfg
-
 
 # --------------------------------------------------------------------------
 # resolve(): the project-wide precedence
@@ -312,9 +310,7 @@ def test_load_tunnels_accepts_a_mapping_with_a_tunnels_key(tmp_path, monkeypatch
     )
     monkeypatch.setenv("MU2EDAQ_CONFIG_DIR", str(tmp_path))
     tunnels = cfg.load_tunnels()
-    assert tunnels == [
-        {"hostname": "a.fnal.gov", "port": 100, "username": "mu2edaq"}
-    ]
+    assert tunnels == [{"hostname": "a.fnal.gov", "port": 100, "username": "mu2edaq"}]
 
 
 def test_load_tunnels_accepts_a_bare_json_list(tmp_path, monkeypatch):

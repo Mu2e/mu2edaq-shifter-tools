@@ -189,9 +189,7 @@ def show_gui(records: List[Dict[str, str]]) -> int:
 @click.version_option(
     package_name="mu2edaq-shifter-tools", prog_name="daq-open-tunnels"
 )
-@click.argument(
-    "action", type=click.Choice(["open", "kill", "list"]), default="list"
-)
+@click.argument("action", type=click.Choice(["open", "kill", "list"]), default="list")
 def main(
     config_file: Optional[str],
     state_file: Optional[str],

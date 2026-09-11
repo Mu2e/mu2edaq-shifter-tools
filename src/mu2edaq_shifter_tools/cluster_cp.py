@@ -189,9 +189,7 @@ def main(
 
     missing = [f for f in files if not Path(f).exists()]
     if missing:
-        click.echo(
-            "daq-cluster-cp: no such file(s): " + ", ".join(missing), err=True
-        )
+        click.echo("daq-cluster-cp: no such file(s): " + ", ".join(missing), err=True)
         sys.exit(2)
 
     try:

@@ -10,7 +10,6 @@ from click.testing import CliRunner
 
 from mu2edaq_shifter_tools import cluster_cp, install_daq_tools, ls2json, open_tunnels
 
-
 # --------------------------------------------------------------------------
 # daq-cluster-cp
 # --------------------------------------------------------------------------
@@ -81,9 +80,7 @@ def test_cluster_cp_rejects_a_missing_source_file(nodes_file):
     assert "no such file" in result.output
 
 
-def test_cluster_cp_user_comes_from_the_environment(
-    tmp_path, nodes_file, monkeypatch
-):
+def test_cluster_cp_user_comes_from_the_environment(tmp_path, nodes_file, monkeypatch):
     payload = tmp_path / "payload.txt"
     payload.write_text("x")
     monkeypatch.setenv("MU2EDAQ_CLUSTER_USER", "fromenv")
@@ -177,9 +174,7 @@ def test_listing_reports_an_unreadable_directory(tmp_path):
 def test_ls2json_writes_a_file(tmp_path):
     (tmp_path / "a.txt").write_text("hello")
     out = tmp_path / "out.json"
-    result = CliRunner().invoke(
-        ls2json.main, ["--output", str(out), str(tmp_path)]
-    )
+    result = CliRunner().invoke(ls2json.main, ["--output", str(out), str(tmp_path)])
     assert result.exit_code == 0, result.output
     data = json.loads(out.read_text())
     assert data[0]["directory"] == str(tmp_path)
@@ -208,7 +203,10 @@ def test_ls2json_defaults_to_stdout(tmp_path, monkeypatch):
         ),
         ({"prefix": "v", "major": 10, "minor": 11, "patch": 12}, "v10_11_12"),
         # Empty suffix must not leave a trailing underscore.
-        ({"prefix": "d", "major": 1, "minor": 2, "patch": 3, "suffix": ""}, "d01_02_03"),
+        (
+            {"prefix": "d", "major": 1, "minor": 2, "patch": 3, "suffix": ""},
+            "d01_02_03",
+        ),
         # Missing components fall back to the schema defaults.
         ({"major": 5}, "d05_00_00"),
     ],
@@ -218,9 +216,7 @@ def test_build_version_string(version, expected):
 
 
 def test_release_paths_joins_onto_the_basepath():
-    config = {
-        "install_path": {"basepath": "/opt/daq", "bin": "bin", "cfg": "config"}
-    }
+    config = {"install_path": {"basepath": "/opt/daq", "bin": "bin", "cfg": "config"}}
     paths = dict(install_daq_tools.release_paths(config))
     assert paths["basepath"] == Path("/opt/daq")
     assert paths["bin"] == Path("/opt/daq/bin")
@@ -239,15 +235,13 @@ def test_install_tools_creates_missing_directories(tmp_path, monkeypatch):
     release.parent.mkdir()
     base = tmp_path / "base"
     base.mkdir()
-    release.write_text(
-        f"""
+    release.write_text(f"""
 base_release: {{prefix: d, major: 9, minor: 0, patch: 0, path: "{base}"}}
 test_release: {{prefix: d, major: 9, minor: 0, patch: 0, path: "{base}"}}
 install_path:
   basepath: "{tmp_path}/install"
   bin: "bin"
-"""
-    )
+""")
     result = CliRunner().invoke(
         install_daq_tools.main,
         ["--release-file", str(release), "--makedirs"],
@@ -258,13 +252,11 @@ install_path:
 
 def test_install_tools_fails_on_a_missing_release_path(tmp_path):
     release = tmp_path / "current_release.yaml"
-    release.write_text(
-        """
+    release.write_text("""
 base_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/base"}
 test_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/test"}
 install_path: {basepath: "/tmp/install"}
-"""
-    )
+""")
     result = CliRunner().invoke(
         install_daq_tools.main, ["--release-file", str(release)]
     )
@@ -274,13 +266,11 @@ install_path: {basepath: "/tmp/install"}
 
 def test_install_tools_override_continues_past_missing_paths(tmp_path):
     release = tmp_path / "current_release.yaml"
-    release.write_text(
-        """
+    release.write_text("""
 base_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/base"}
 test_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/test"}
 install_path: {basepath: "/tmp/install"}
-"""
-    )
+""")
     result = CliRunner().invoke(
         install_daq_tools.main, ["--release-file", str(release), "--override"]
     )

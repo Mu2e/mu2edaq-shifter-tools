@@ -129,9 +129,7 @@ def main(
     if verbose:
         for item in data:
             if item.get("error"):
-                click.echo(
-                    f"{item['directory']}: {item['error']}", err=True
-                )
+                click.echo(f"{item['directory']}: {item['error']}", err=True)
             else:
                 click.echo(
                     f"{item['directory']}: {len(item['files'])} entries", err=True
