@@ -1,4 +1,4 @@
-.TH SET_GIT_ENV.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH SET_GIT_ENV.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 set_git_env.sh \- configure git and GitHub access from the Kerberos principal
 .SH SYNOPSIS
@@ -36,7 +36,7 @@ a shared group account are still attributed to the individual.
 so \fBGIT_SSH_COMMAND\fR persists.
 .SH OPTIONS
 Configuration precedence is command line, then environment variable,
-then built-in default.
+then .env file, then built-in default.
 .TP
 .BR \-k ", " \-\-key " " \fIFILE\fR
 Private key for \fBGIT_SSH_COMMAND\fR. Environment:

@@ -1,4 +1,4 @@
-.TH GET_KRB_DAQ_PRINCIPAL.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH GET_KRB_DAQ_PRINCIPAL.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 get_krb_daq_principal.sh \- obtain a DAQ group ticket from its keytab
 .SH SYNOPSIS
@@ -49,7 +49,7 @@ account. Dropping step 3 would leave the human's credentials available
 to anything running as the group account.
 .SH OPTIONS
 Configuration precedence is command line, then environment variable,
-then built-in default.
+then .env file, then built-in default.
 .TP
 .BR \-d ", " \-\-keytab\-dir " " \fIDIR\fR
 Directory holding the per-account keytabs. Environment:

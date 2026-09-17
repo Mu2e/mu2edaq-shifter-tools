@@ -94,13 +94,19 @@ the control room:
 - every page has `NAME`, `SYNOPSIS`, `DESCRIPTION` and `SEE ALSO`,
   a `.TH` header whose section matches its directory, and a `NAME` line
   matching its filename
-- every page renders through `man` without error
+- every page renders through `man` without error, and passes
+  `mandoc -T lint` with no errors or warnings where mandoc is installed
+- no page has an unescaped line beginning with `.` or `'`, which roff
+  would treat as a macro and silently drop from the rendered output
 - the README mentions every command
 - every `MU2EDAQ_*` variable the shell code reads is documented in
   `.env.example`
+- a man page claims the `.env` precedence tier exactly when its script
+  calls `daq_load_dotenv`
 
-That last one has already caught variables added to a script but not
-documented.
+Those checks have already caught variables added to a script but not
+documented, and example commands that groff was silently dropping from
+six man pages.
 
 ## CMake targets
 
@@ -115,7 +121,12 @@ cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$HOME/daq-tools
 | `test` (via `ctest`) | the pytest suite plus a `bash -n` check per script |
 
 CTest registers one `pytest` test plus one `shellsyntax_<name>` test per
-script, so a syntax error is reported against the specific file.
+script, so a syntax error is reported against the specific file. The
+`pytest` test runs with the project `venv/` interpreter and is
+registered only if `pytest`, PyYAML and click import there; otherwise
+the configure step says so and tells you to build the `venv` target
+first, rather than registering a test that fails for want of a
+dependency.
 
 Options are listed in [INSTALL.md](INSTALL.md#useful-cmake-options).
 The configure step prints a summary of what it will install and warns

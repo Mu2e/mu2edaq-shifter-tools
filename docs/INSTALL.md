@@ -98,13 +98,15 @@ cmake --install build
 The resulting tree:
 
 ```
-<prefix>/bin                    shell commands and Python entry points
-<prefix>/share/man/man1         command man pages
-<prefix>/share/man/man3         API man pages
-<prefix>/share/mu2edaq/config   config examples
-<prefix>/share/mu2edaq/data     static data
-<prefix>/share/mu2edaq/login    login dotfiles
-<prefix>/share/doc/mu2edaq      this documentation
+<prefix>/bin                              shell commands and Python entry points
+<prefix>/lib/pythonX.Y/site-packages      the Python package (see PYTHONPATH below)
+<prefix>/share/man/man1                   command man pages
+<prefix>/share/man/man3                   API man pages
+<prefix>/share/mu2edaq/mu2edaq-env.sh     generated environment script
+<prefix>/share/mu2edaq/config             config examples
+<prefix>/share/mu2edaq/data               static data
+<prefix>/share/mu2edaq/login              login dotfiles
+<prefix>/share/doc/mu2edaq-shifter-tools  this documentation
 ```
 
 ### Setting up the environment

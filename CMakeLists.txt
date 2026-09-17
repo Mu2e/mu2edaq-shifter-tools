@@ -12,16 +12,20 @@
 #
 # Layout produced by "cmake --install":
 #
-#   <prefix>/bin                       shell commands and the Python entry points
-#   <prefix>/share/man/man1            command man pages
-#   <prefix>/share/man/man3            API man pages
-#   <prefix>/share/mu2edaq/config      config examples and defaults
-#   <prefix>/share/mu2edaq/data        static data (node inventory, principals)
-#   <prefix>/share/mu2edaq/login       login dotfiles (installed by install-login.sh)
-#   <prefix>/share/doc/mu2edaq         markdown documentation
+#   <prefix>/bin                              shell commands and the Python entry points
+#   <prefix>/lib/pythonX.Y/site-packages      the Python package, via pip --prefix
+#   <prefix>/share/man/man1                   command man pages
+#   <prefix>/share/man/man3                   API man pages
+#   <prefix>/share/mu2edaq/mu2edaq-env.sh     generated environment script
+#   <prefix>/share/mu2edaq/config             config examples and defaults
+#   <prefix>/share/mu2edaq/data               static data (node inventory, principals)
+#   <prefix>/share/mu2edaq/login              login dotfiles (installed by install-login.sh)
+#   <prefix>/share/doc/mu2edaq-shifter-tools  markdown documentation (CMAKE_INSTALL_DOCDIR)
 #
-# Set MU2EDAQ_ROOT=<prefix>/share/mu2edaq at runtime so the installed
-# commands find their config and data.
+# After installing, source <prefix>/share/mu2edaq/mu2edaq-env.sh: it
+# exports MU2EDAQ_ROOT so the commands find their config and data, and
+# puts the site-packages directory on PYTHONPATH, without which the
+# daq-* console scripts cannot import the package.
 
 cmake_minimum_required(VERSION 3.16)
 

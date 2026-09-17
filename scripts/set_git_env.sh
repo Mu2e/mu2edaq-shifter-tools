@@ -19,7 +19,7 @@
 #
 # Requires KRB5_PRINCIPAL, which get_krb_principal.sh exports.
 #
-# Configuration precedence: command line > environment > default.
+# Configuration precedence: command line > environment > .env > default.
 #
 #   -k, --key FILE   private key to use   (env GIT_SSH_KEY,
 #                                          default ~/.ssh/id_<user>_rsa)
@@ -31,6 +31,19 @@
 # See set_git_env.sh(1).
 
 _sge_main() {
+    # Load the .env tier before reading any default, so ~/.mu2edaq/env
+    # and the other .env files can supply GIT_SSH_KEY. Optional: the
+    # script still works standalone if the library is not reachable.
+    if ! command -v daq_load_dotenv >/dev/null 2>&1; then
+        local here lib
+        here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+        for lib in "$here/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+            # shellcheck source=scripts/daq-common.sh
+            [ -f "$lib" ] && { . "$lib"; break; }
+        done
+    fi
+    command -v daq_load_dotenv >/dev/null 2>&1 && daq_load_dotenv
+
     local key="${GIT_SSH_KEY:-}"
     local scope="--global"
     local verbose="${VERBOSE:-}"

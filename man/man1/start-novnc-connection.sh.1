@@ -1,4 +1,4 @@
-.TH START-NOVNC-CONNECTION.SH 1 "2026-07-01" "mu2edaq-shifter-tools" "User Commands"
+.TH START-NOVNC-CONNECTION.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a session dashboard
 .SH SYNOPSIS
@@ -32,7 +32,10 @@ dashboard file, are torn down when the script exits, whether via
 Ctrl-C, the ssh session dying, or normal termination.
 .SH OPTIONS
 Configuration precedence is command line, then environment variable,
-then built-in default.
+then .env file, then built-in default. The .env tier is read only when
+.BR daq-common.sh (3)
+is installed alongside this script; without it the script still runs,
+from the environment and defaults alone.
 .TP
 .BR \-H ", " \-\-host " " \fIHOST\fR
 Remote host to tunnel to. Environment: \fBNOVNC_HOST\fR. Default:
@@ -89,6 +92,18 @@ See OPTIONS above.
 Default location for the VNC password used to build auto-connecting
 session links. Should be readable only by the owner
 (\fBchmod 600\fR).
+.SH EXIT STATUS
+.TP
+.B 0
+The dry run or help completed.
+.TP
+.B 1
+An option was not recognised, no free local port could be found, or
+\fBssh\fR exited before the tunnel came up.
+.PP
+Otherwise the script waits on the tunnel and returns the exit status
+of \fBssh\fR when it closes; an interrupt with Ctrl-C tears the tunnel
+down and exits with the shell's interrupt status.
 .SH EXAMPLES
 Open a tunnel with all defaults:
 .PP

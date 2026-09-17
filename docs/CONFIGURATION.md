@@ -241,8 +241,17 @@ start-daq.sh                      # uses those options
 start-daq.sh -z partition_0       # command line still wins
 ```
 
-The pre-rename names (`START_DAQ_OPTS`, `KILL_DAQ_OPTS`) are still
-honoured, but only when the modern name is unset.
+The pre-rename names are still honoured when the modern name is unset:
+`START_DAQ_OPTS`, `SETUP_ONLINE_OPTS` and `CREATE_ENVIRONMENT_OPTS` are
+derived automatically from the script name, and `stop-daq.sh`
+additionally reads `KILL_DAQ_OPTS`, the variable its predecessor
+`kill_daq` used.
+
+Not every command reads the `.env` tier. `bootstrap.sh` and
+`install-login.sh` run before a `.env` exists (the first creates it,
+the second writes `~/.mu2edaq/env`), and `get_krb_principal.sh` has no
+settings at all. Every other command loads `.env`; each man page's
+OPTIONS section states the precedence that command actually follows.
 
 ## Worked example
 

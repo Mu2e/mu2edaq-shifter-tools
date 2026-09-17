@@ -33,14 +33,15 @@ are in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Commands
 
-Every command supports `--help`, takes its settings as
-`command line > environment > .env > config file > default`, and has a
-man page.
+Every command supports `--help` and has a man page. Settings resolve as
+`command line > environment > .env > config file > default`; the two
+setup scripts skip the `.env` tier because they run before one exists,
+and each man page states the precedence its command actually follows.
 
 ### Partition lifecycle
 
 Run on the DAQ cluster. These manage `otsdaq` (`ots`) instances inside
-tmux and read `config/daq-operations.yaml`.
+tmux and, apart from `start-tmux.sh`, read `config/daq-operations.yaml`.
 
 | Command | What it does |
 |---|---|

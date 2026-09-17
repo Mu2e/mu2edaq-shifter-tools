@@ -20,9 +20,10 @@
 #     KRB5_PRINCIPAL  - the principal string
 #     KRB5_KEYTAB     - path to the keytab the principal came from
 #
-# The keytab directory can be overridden (CLI > environment > default):
+# The keytab directory can be overridden
+# (CLI > environment > .env > default):
 #     --keytab-dir DIR   command-line option
-#     KRB5_KEYTAB_DIR    environment variable
+#     KRB5_KEYTAB_DIR    environment variable, or a .env file
 #
 # Intended to be sourced (so the exports persist), but also runs
 # standalone to print the principal.
@@ -30,6 +31,19 @@
 # See get_krb_daq_principal.sh(1).
 
 _gkdp_main() {
+    # Load the .env tier before reading any default, so ~/.mu2edaq/env
+    # and the other .env files can supply KRB5_KEYTAB_DIR. Optional: the
+    # script still works standalone if the library is not reachable.
+    if ! command -v daq_load_dotenv >/dev/null 2>&1; then
+        local here lib
+        here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+        for lib in "$here/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+            # shellcheck source=scripts/daq-common.sh
+            [ -f "$lib" ] && { . "$lib"; break; }
+        done
+    fi
+    command -v daq_load_dotenv >/dev/null 2>&1 && daq_load_dotenv
+
     local keytab_dir="${KRB5_KEYTAB_DIR:-$HOME/.krb5}"
     local default_keytab="mu2edaq.keytab"
     local default_principal="mu2edaq/mu2edaq/mu2e.fnal.gov@FNAL.GOV"

@@ -9,11 +9,12 @@ shifter or a script invokes.
 The commands fall into two groups that share only the configuration
 layer:
 
-**Partition lifecycle** — run on the DAQ cluster, manage `otsdaq`
-(`ots`) instances inside tmux, and need the operations YAML:
-`start-daq.sh`, `stop-daq.sh`, `daq-status.sh`, `setup-online.sh`,
-`create-environment.sh`, `send-run-control-command.sh`,
-`start-tmux.sh`.
+**Partition lifecycle** — run on the DAQ cluster and manage `otsdaq`
+(`ots`) instances inside tmux: `start-daq.sh`, `stop-daq.sh`,
+`daq-status.sh`, `setup-online.sh`, `create-environment.sh`,
+`send-run-control-command.sh`, and `start-tmux.sh`. All but the last
+read the operations YAML; `start-tmux.sh` only lays out panes and
+needs nothing beyond tmux.
 
 **Shifter workstation plumbing** — run wherever the operator is, and
 reach the control room from outside it: `daq-tunnels.sh`,
@@ -21,10 +22,12 @@ reach the control room from outside it: `daq-tunnels.sh`,
 `manage-vnc-servers.sh`, `daq-cluster-cp`, `daq-network-verify.sh`, and
 the Kerberos/git login scripts.
 
-Only the first group needs Python, and only because it reads YAML
-through `daq-read-config`. The second group needs nothing but `bash`
-and `ssh`, which is a property worth preserving — see
-[CONFIGURATION.md](CONFIGURATION.md#yaml-or-environment).
+Only the YAML-reading commands need Python, and only because they read
+it through `daq-read-config`. The second group's shell commands need
+nothing but `bash` and `ssh`, which is a property worth preserving —
+see [CONFIGURATION.md](CONFIGURATION.md#yaml-or-environment).
+(`daq-open-tunnels` and `daq-cluster-cp` are Python by nature and are
+the exception in that group.)
 
 ## The configuration layer
 
@@ -78,9 +81,13 @@ this reason.
 
 ### `daq-common.sh`
 
-Sourced by every shell command. It replaced four verbatim copies of an
-artdaq-style `expr`-based option parser, which is where several of the
-bugs fixed in v1.1.0 were hiding.
+Sourced by every operator command that has settings to resolve. The
+partition-lifecycle and tunnel commands depend on it outright; the VNC
+and login scripts source it optionally, for the `.env` tier, and still
+run without it. Only the two setup scripts and `get_krb_principal.sh`,
+which has no settings, leave it alone. It replaced four verbatim copies
+of an artdaq-style `expr`-based option parser, which is where several
+of the bugs fixed in v1.1.0 were hiding.
 
 It provides root discovery, `.env` loading, the config search,
 interpreter discovery, `daq-read-config` invocation, `<COMMAND>_OPTS`

@@ -1,4 +1,4 @@
-.TH STOP-DAQ.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH STOP-DAQ.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 stop-daq.sh \- stop the Mu2e DAQ for one or all partitions
 .SH SYNOPSIS
@@ -67,8 +67,10 @@ Trace execution with \fBset \-x\fR.
 .SH ENVIRONMENT
 .TP
 .B STOP_DAQ_SH_OPTS
-Extra options, prepended to the command line. \fBKILL_DAQ_OPTS\fR is
-also accepted, for compatibility with the pre-rename script.
+Extra options, prepended to the command line. For compatibility with
+the pre-rename \fBkill_daq\fR script, \fBSTOP_DAQ_OPTS\fR and then
+\fBKILL_DAQ_OPTS\fR are consulted in that order when
+\fBSTOP_DAQ_SH_OPTS\fR is unset.
 .SH EXIT STATUS
 .TP
 .B 0

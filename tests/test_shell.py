@@ -358,3 +358,201 @@ def test_start_and_stop_agree_on_window_names():
     assert (
         windows == status_windows
     ), f"start-daq.sh builds {windows}, daq-status.sh looks for {status_windows}"
+
+
+# --------------------------------------------------------------------------
+# Claims the documentation makes about the scripts
+# --------------------------------------------------------------------------
+
+
+def test_stop_daq_honours_the_kill_daq_opts_variable():
+    """stop-daq.sh replaced kill_daq, which read $KILL_DAQ_OPTS.
+
+    The man page and CONFIGURATION.md promise that variable still works.
+    daq_script_opts derives the legacy name from the script's own name
+    (STOP_DAQ_OPTS), so KILL_DAQ_OPTS needs explicit handling in
+    stop-daq.sh; this guards against that handling being dropped.
+    """
+    # conftest has already neutralised MU2EDAQ_* and pointed MU2EDAQ_DOTENV
+    # at a file that does not exist, so this inherits an isolated env.
+    env = dict(os.environ)
+    env["KILL_DAQ_OPTS"] = "-z partition_from_kill_daq_opts"
+    result = subprocess.run(
+        [str(REPO_ROOT / "stop-daq.sh"), "-n", "-y"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(REPO_ROOT),
+        env=env,
+    )
+    output = result.stdout.decode()
+    if "tmux is not installed" in output:
+        pytest.skip("tmux is not available")
+    assert result.returncode == 0, output
+    assert "partition_from_kill_daq_opts" in output, output
+
+    # The modern name must still win over the legacy one.
+    env["STOP_DAQ_SH_OPTS"] = "-z partition_from_modern_opts"
+    result = subprocess.run(
+        [str(REPO_ROOT / "stop-daq.sh"), "-n", "-y"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(REPO_ROOT),
+        env=env,
+    )
+    output = result.stdout.decode()
+    assert "partition_from_modern_opts" in output, output
+    assert "partition_from_kill_daq_opts" not in output, output
+
+
+def _man_page_for(script: str) -> Path:
+    return REPO_ROOT / "man" / "man1" / f"{Path(script).name}.1"
+
+
+@pytest.mark.parametrize(
+    "script",
+    [s for s in COMMANDS + SOURCED if s != "scripts/daq-common.sh"],
+)
+def test_man_page_env_tier_claim_matches_the_script(script):
+    """A man page says ".env" in its precedence sentence iff the script
+    actually loads the .env tier.
+
+    Regression: manage-vnc-servers.sh, start-novnc-connection.sh,
+    set_git_env.sh and get_krb_daq_principal.sh were documented in the
+    README, CONFIGURATION.md and .env.example as reading .env, while
+    their own headers and man pages (correctly) said they did not.
+    """
+    page = _man_page_for(script)
+    text = page.read_text()
+    # The precedence sentence lives between .SH OPTIONS and the first .TP.
+    options = text.split(".SH OPTIONS", 1)
+    precedence = options[1].split(".TP", 1)[0] if len(options) > 1 else ""
+    claims_dotenv = ".env" in precedence
+
+    loads_dotenv = "daq_load_dotenv" in (REPO_ROOT / script).read_text()
+
+    assert claims_dotenv == loads_dotenv, (
+        f"{page.name} {'claims' if claims_dotenv else 'does not claim'} the "
+        f".env tier but {script} {'does' if loads_dotenv else 'does not'} "
+        "call daq_load_dotenv"
+    )
+
+
+# --------------------------------------------------------------------------
+# The .env tier actually reaches the commands that document it
+#
+# These four scripts do not use the daq-common.sh option parser, so they
+# load .env through an optional sourcing block of their own. Each test
+# points MU2EDAQ_DOTENV at a file under tmp_path and checks, via a dry
+# run, that the value arrived -- and that the real environment still wins.
+# --------------------------------------------------------------------------
+
+
+def _run_with_dotenv(command, dotenv: Path, extra_env=None, cwd=None):
+    env = dict(os.environ)
+    env["MU2EDAQ_DOTENV"] = str(dotenv)
+    if extra_env:
+        env.update(extra_env)
+    return subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=str(cwd or REPO_ROOT),
+        env=env,
+    )
+
+
+def test_manage_vnc_servers_reads_the_dotenv_tier(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("VNC_HOST=from-dotenv.example\n")
+    result = _run_with_dotenv(
+        [str(REPO_ROOT / "scripts/manage-vnc-servers.sh"), "restart", "-n"], dotenv
+    )
+    assert result.returncode == 0, result.stdout.decode()
+    assert "from-dotenv.example" in result.stdout.decode()
+
+    # Environment outranks .env.
+    result = _run_with_dotenv(
+        [str(REPO_ROOT / "scripts/manage-vnc-servers.sh"), "restart", "-n"],
+        dotenv,
+        extra_env={"VNC_HOST": "from-env.example"},
+    )
+    output = result.stdout.decode()
+    assert "from-env.example" in output
+    assert "from-dotenv.example" not in output
+
+
+def test_start_novnc_connection_reads_the_dotenv_tier(tmp_path):
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("NOVNC_HOST=novnc-from-dotenv.example\nNOVNC_LOCAL_PORT=45999\n")
+    result = _run_with_dotenv(
+        [str(REPO_ROOT / "scripts/start-novnc-connection.sh"), "-n"], dotenv
+    )
+    assert result.returncode == 0, result.stdout.decode()
+    output = result.stdout.decode()
+    assert "novnc-from-dotenv.example" in output
+    # NOVNC_LOCAL_PORT came from .env too, so no free-port scan was needed.
+    assert "45999" in output
+
+
+def test_get_krb_daq_principal_reads_the_dotenv_tier(tmp_path):
+    """KRB5_KEYTAB_DIR from .env decides where the keytab is looked for.
+
+    The directory holds no keytab, so the script falls back to the
+    default identity and never reaches kinit; it reports Fail and returns
+    1, which is the expected outcome here.
+    """
+    keytabs = tmp_path / "keytabs"
+    keytabs.mkdir()
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(f"KRB5_KEYTAB_DIR={keytabs}\n")
+    script = REPO_ROOT / "scripts" / "get_krb_daq_principal.sh"
+    result = _run_with_dotenv(
+        [
+            BASH,
+            "-c",
+            f'source "{script}" >/dev/null 2>&1; printf "%s" "$KRB5_KEYTAB"',
+        ],
+        dotenv,
+    )
+    assert result.stdout.decode().strip() == str(keytabs / "mu2edaq.keytab")
+
+
+def test_set_git_env_reads_the_dotenv_tier(tmp_path):
+    """GIT_SSH_KEY from .env ends up in GIT_SSH_COMMAND.
+
+    Run with --local inside a throwaway git repository so the identity
+    it writes lands in tmp_path, never in this checkout's .git/config.
+    stdin is not a terminal here, so ssh-add is skipped by design.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    init = subprocess.run(
+        ["git", "init", "-q", str(repo)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if init.returncode != 0:
+        pytest.skip("git is not available")
+
+    dotenv = tmp_path / ".env"
+    dotenv.write_text("GIT_SSH_KEY=/from/dotenv/id_rsa\n")
+    script = REPO_ROOT / "scripts" / "set_git_env.sh"
+    result = _run_with_dotenv(
+        [
+            BASH,
+            "-c",
+            f'source "{script}" --local >/dev/null 2>&1; '
+            'printf "%s" "$GIT_SSH_COMMAND"',
+        ],
+        dotenv,
+        extra_env={"KRB5_PRINCIPAL": "shifter@FNAL.GOV"},
+        cwd=repo,
+    )
+    assert result.stdout.decode().strip() == "ssh -i /from/dotenv/id_rsa"
+
+    # And the identity really went to the throwaway repo, not ours.
+    email = subprocess.run(
+        ["git", "-C", str(repo), "config", "--local", "user.email"],
+        stdout=subprocess.PIPE,
+    )
+    assert email.stdout.decode().strip() == "shifter@FNAL.GOV"

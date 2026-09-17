@@ -65,8 +65,13 @@ Stop the DAQ for one partition, or for all of them with -A.
   -h, --help            show this help and exit
 "
 
-# Options may also be supplied via $STOP_DAQ_SH_OPTS (or the legacy
-# $KILL_DAQ_OPTS).
+# Options may also be supplied via $STOP_DAQ_SH_OPTS, or via $STOP_DAQ_OPTS
+# and the original $KILL_DAQ_OPTS for compatibility with the pre-rename
+# kill_daq script. daq_script_opts derives the legacy name from this
+# file's own name, so the kill_daq spelling has to be honoured here.
+if [ -z "${STOP_DAQ_SH_OPTS:-}${STOP_DAQ_OPTS:-}" ] && [ -n "${KILL_DAQ_OPTS:-}" ]; then
+    STOP_DAQ_SH_OPTS="$KILL_DAQ_OPTS"
+fi
 # The command substitution is deliberately unquoted: $<COMMAND>_OPTS
 # holds a list of options that must be split into separate words.
 # shellcheck disable=SC2046

@@ -1,4 +1,4 @@
-.TH MANAGE-VNC-SERVERS.SH 1 "2026-07-01" "mu2edaq-shifter-tools" "User Commands"
+.TH MANAGE-VNC-SERVERS.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 manage-vnc-servers.sh \- start, stop, or restart VNC servers on the noVNC manager host
 .SH SYNOPSIS
@@ -26,7 +26,10 @@ Output from each port's systemctl invocation is reported individually
 as \fB:PORT -> OK\fR or \fB:PORT -> FAILED\fR.
 .SH OPTIONS
 Configuration precedence is command line, then environment variable,
-then built-in default.
+then .env file, then built-in default. The .env tier is read only when
+.BR daq-common.sh (3)
+is installed alongside this script; without it the script still runs,
+from the environment and defaults alone.
 .TP
 .BR start | stop | restart
 Required. The systemctl action to run against every configured port.
@@ -55,6 +58,18 @@ Show a usage summary and exit.
 .TP
 .B VNC_HOST ", " VNC_USER ", " VNC_PORTS
 See OPTIONS above.
+.SH EXIT STATUS
+.TP
+.B 0
+Every port was acted on (each is still reported individually as
+\fBOK\fR or \fBFAILED\fR), or the dry run or help completed.
+.TP
+.B 1
+No action was given, an option or port was invalid, the operator
+declined at the prompt, or the script was run non-interactively
+without \fB\-y\fR.
+.PP
+Otherwise the exit status of the single \fBssh\fR session is returned.
 .SH EXAMPLES
 Preview a restart of the default ports without changing anything:
 .PP
