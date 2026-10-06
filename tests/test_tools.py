@@ -235,13 +235,15 @@ def test_install_tools_creates_missing_directories(tmp_path, monkeypatch):
     release.parent.mkdir()
     base = tmp_path / "base"
     base.mkdir()
-    release.write_text(f"""
+    release.write_text(
+        f"""
 base_release: {{prefix: d, major: 9, minor: 0, patch: 0, path: "{base}"}}
 test_release: {{prefix: d, major: 9, minor: 0, patch: 0, path: "{base}"}}
 install_path:
   basepath: "{tmp_path}/install"
   bin: "bin"
-""")
+"""
+    )
     result = CliRunner().invoke(
         install_daq_tools.main,
         ["--release-file", str(release), "--makedirs"],
@@ -252,11 +254,13 @@ install_path:
 
 def test_install_tools_fails_on_a_missing_release_path(tmp_path):
     release = tmp_path / "current_release.yaml"
-    release.write_text("""
+    release.write_text(
+        """
 base_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/base"}
 test_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/test"}
 install_path: {basepath: "/tmp/install"}
-""")
+"""
+    )
     result = CliRunner().invoke(
         install_daq_tools.main, ["--release-file", str(release)]
     )
@@ -266,11 +270,13 @@ install_path: {basepath: "/tmp/install"}
 
 def test_install_tools_override_continues_past_missing_paths(tmp_path):
     release = tmp_path / "current_release.yaml"
-    release.write_text("""
+    release.write_text(
+        """
 base_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/base"}
 test_release: {prefix: d, major: 9, minor: 0, patch: 0, path: "/nonexistent/test"}
 install_path: {basepath: "/tmp/install"}
-""")
+"""
+    )
     result = CliRunner().invoke(
         install_daq_tools.main, ["--release-file", str(release), "--override"]
     )
