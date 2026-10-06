@@ -1,0 +1,237 @@
+schema: mega-review/1
+package: mu2edaq-shifter-tools
+tier: A
+group: operations
+repo:
+  url: git@github.com:Mu2e/mu2edaq-shifter-tools.git
+  exists: true
+  issues_enabled: true
+doc_dir: docs
+summary: >
+  Operator command-line toolkit for the Mu2e DAQ: tmux-based start, stop and
+  status of otsdaq partitions, SSH tunnel and noVNC access to the control room,
+  parallel cluster file copy, and the Kerberos/git login environment for shared
+  shifter accounts
+languages: [bash, python]
+loc: 6989   # tracked *.sh, *.py (incl. tests), login/*, CMakeLists.txt, cmake/*.in
+
+runtime:
+  executables:
+    - {name: start-daq.sh, kind: cli, man_page: man/man1/start-daq.sh.1}
+    - {name: stop-daq.sh, kind: cli, man_page: man/man1/stop-daq.sh.1}
+    - {name: install-login.sh, kind: script, man_page: man/man1/install-login.sh.1}
+    - {name: bootstrap.sh, kind: script, man_page: man/man1/bootstrap.sh.1}
+    - {name: setup-online.sh, kind: script, man_page: man/man1/setup-online.sh.1}   # must be sourced
+    - {name: create-environment.sh, kind: cli, man_page: man/man1/create-environment.sh.1}
+    - {name: daq-status.sh, kind: cli, man_page: man/man1/daq-status.sh.1}
+    - {name: send-run-control-command.sh, kind: cli, man_page: man/man1/send-run-control-command.sh.1}   # stub, exits 3
+    - {name: daq-tunnels.sh, kind: cli, man_page: man/man1/daq-tunnels.sh.1}
+    - {name: daq-network-verify.sh, kind: cli, man_page: man/man1/daq-network-verify.sh.1}
+    - {name: start-tmux.sh, kind: cli, man_page: man/man1/start-tmux.sh.1}
+    - {name: manage-vnc-servers.sh, kind: cli, man_page: man/man1/manage-vnc-servers.sh.1}
+    - {name: start-novnc-connection.sh, kind: cli, man_page: man/man1/start-novnc-connection.sh.1}
+    - {name: get_krb_principal.sh, kind: script, man_page: man/man1/get_krb_principal.sh.1}
+    - {name: get_krb_daq_principal.sh, kind: script, man_page: man/man1/get_krb_daq_principal.sh.1}
+    - {name: set_git_env.sh, kind: script, man_page: man/man1/set_git_env.sh.1}
+    - {name: daq-read-config, kind: cli, man_page: man/man1/daq-read-config.1}
+    - {name: daq-open-tunnels, kind: cli, man_page: man/man1/daq-open-tunnels.1}
+    - {name: daq-cluster-cp, kind: cli, man_page: man/man1/daq-cluster-cp.1}
+    - {name: daq-ls2json, kind: cli, man_page: man/man1/daq-ls2json.1}
+    - {name: daq-install-tools, kind: cli, man_page: man/man1/daq-install-tools.1}
+    - {name: daq-common.sh, kind: library, man_page: man/man3/daq-common.sh.3}
+    - {name: mu2edaq_shifter_tools, kind: library, man_page: man/man3/mu2edaq_shifter_tools.3}
+    - {name: mu2edaq_shifter_tools.config, kind: library, man_page: man/man3/mu2edaq_shifter_tools_config.3}
+  config_man_pages:
+    - man/man5/daq-operations.yaml.5
+    - man/man5/tunnels.yaml.5
+    - man/man5/current_release.yaml.5   # not installed: CMakeLists.txt:188-196 globs man1/man3 only
+  services: []
+  # Nothing binds a service port. Entries are SSH local forwards on the
+  # operator's loopback (role names the far end) and outbound targets.
+  ports:
+    - {port: 3075, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3075 (shift ots)", source: "scripts/daq-tunnels.sh:63"}
+    - {port: 3085, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3085 (crv ots)", source: "scripts/daq-tunnels.sh:64"}
+    - {port: 3025, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3025 (calo ots)", source: "scripts/daq-tunnels.sh:65"}
+    - {port: 3045, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3045 (trig; setup_ots.sh says 3065)", source: "scripts/daq-tunnels.sh:66"}
+    - {port: 5029, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:5029 (dqm ots)", source: "scripts/daq-tunnels.sh:67"}
+    - {port: 5033, proto: tcp, role: "ssh-forward -> mu2e-dl-01-data:5033 (dqm visualizer)", source: "scripts/daq-tunnels.sh:68"}
+    - {port: 8877, proto: tcp, role: "ssh-forward -> mu2e-dl-01:8877 (crv dqm, no offset)", source: "scripts/daq-tunnels.sh:69"}
+    - {port: 3095, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3095 (cfo ots)", source: "scripts/daq-tunnels.sh:70"}
+    - {port: 30351, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:30351 (stm; setup_ots.sh says 3035)", source: "scripts/daq-tunnels.sh:71"}
+    - {port: 3065, proto: tcp, role: "ssh-forward -> mu2e-cfo-01:3065 (trk ots)", source: "scripts/daq-tunnels.sh:72"}
+    - {port: 3000, proto: tcp, role: "ssh-forward -> mu2e-dcs-01:3000 (grafana, no offset)", source: "scripts/daq-tunnels.sh:74"}
+    - {port: "uid+973+3201", proto: tcp, role: "ssh-forward -> mu2edaq-gateway localhost:<same>", source: "config/tunnels.example.yaml:26"}
+    - {port: "uid+973+3203", proto: tcp, role: "ssh-forward -> mu2egateway01 and mu2egateway02 localhost:<same> (collide)", source: "config/tunnels.example.yaml:31"}
+    - {port: 443, proto: tcp, role: "ssh-forward target on mu2e-mgr-01 (noVNC manager), local port chosen free", source: "scripts/start-novnc-connection.sh:62"}
+    - {port: "10000+port_offset", proto: udp, role: "otsdaq gateway run-control target (computed, never sent; unverified)", source: "config/daq-operations.example.yaml:21"}
+    - {port: 1973, proto: tcp, role: "resource_manager_port config key; unused, nothing listens (see RM-008)", source: "config/daq-operations.example.yaml:23"}
+  ssh_routes:
+    daq-tunnels.sh: "mu2eshift@mu2e-dcs-01.fnal.gov via ProxyJump mu2eshift@mu2egateway02.fnal.gov (scripts/daq-tunnels.sh:80-82,296)"
+    daq-open-tunnels: "direct to mu2edaq-gateway, mu2egateway01, mu2egateway02 as user mu2edaq, no jump (config/tunnels.example.yaml:23-36)"
+    start-novnc-connection.sh: "$USER@mu2e-mgr-01.fnal.gov via ProxyJump mu2egateway01.fnal.gov (scripts/start-novnc-connection.sh:53-54)"
+    manage-vnc-servers.sh: "mu2ecr01@mu2e-mgr-01.fnal.gov, no jump (scripts/manage-vnc-servers.sh:41-42)"
+    ots_8443: "no tunnel forwards 8443 on either gateway; no evidence for the gateway01/02 dispute"
+  config_files:
+    - config/daq-operations.yaml     # tracked symlink to daq-operations.example.yaml
+    - config/tunnels.yaml            # tracked symlink to tunnels.example.yaml
+    - config/current_release.yaml    # gitignored; template current_release.example.yaml
+    - config/ssh-config-mu2e.example # documentation only, read by no command
+    - .env                           # untracked; template .env.example
+    - ~/.mu2edaq/env                 # written by install-login.sh
+    - data/daq_nodes.json
+    - data/mu2e_kerberos_principals.json
+  env_vars: [MU2EDAQ_ROOT, MU2EDAQ_CONFIG, MU2EDAQ_CONFIG_DIR, MU2EDAQ_DATA_DIR,
+             MU2EDAQ_DOTENV, MU2EDAQ_PARTITION, MU2EDAQ_ENVIRONMENT, MU2EDAQ_RC_HOST,
+             MU2EDAQ_STOP_TIMEOUT, MU2EDAQ_OTSDAQ_REF, MU2EDAQ_TMUX_SESSION, MU2EDAQ_TMUX_CWD,
+             MU2EDAQ_TUNNELS, MU2EDAQ_TUNNEL_BASE_PORT, MU2EDAQ_TUNNEL_STATE,
+             MU2EDAQ_TUNNEL_SERVICES, MU2EDAQ_TUNNEL_EXTRA_SERVICES, MU2EDAQ_TUNNEL_OFFSET,
+             MU2EDAQ_TUNNEL_USER, MU2EDAQ_TUNNEL_HOST, MU2EDAQ_TUNNEL_JUMP,
+             MU2EDAQ_TUNNEL_STATE_SH, MU2EDAQ_CLUSTER_USER, MU2EDAQ_CLUSTER_JOBS,
+             MU2EDAQ_NETWORKS, MU2EDAQ_NETVERIFY_DIR, MU2EDAQ_INSTALL_HOME, MU2EDAQ_INSTALL_BIN,
+             NOVNC_HOST, NOVNC_USER, NOVNC_PROXY_JUMP, NOVNC_LOCAL_PORT, NOVNC_REMOTE_PORT,
+             NOVNC_PASSWORD_FILE, VNC_HOST, VNC_USER, VNC_PORTS, KRB5_KEYTAB_DIR, GIT_SSH_KEY,
+             VERBOSE, PYTHON, START_DAQ_SH_OPTS, STOP_DAQ_SH_OPTS, KILL_DAQ_OPTS]
+
+interactions:
+  depends_on:
+    - package: otsdaq-mu2e
+      via: http
+      direction: out
+      evidence: "scripts/create-environment.sh:118"
+      note: "downloads and executes tools/mu2e-quick-spack-start.sh from the develop branch"
+    - package: mu2edaq-cluster-tools
+      via: subprocess
+      direction: out
+      evidence: "login/aliases:13"
+      note: "sshx/nodes aliases run ssh-selector -c ~/config/mu2e_daq.yaml; that config path is installed by neither package"
+  depended_on_by: []
+  related_without_dependency:
+    - package: mu2edaq-resource-manager
+      note: "resource_manager_port 1973 is printed by daq-read-config and consumed by nothing; the service binds 8080 (its RM-008)"
+      evidence: "src/mu2edaq_shifter_tools/config.py:432"
+    - package: mu2edaq-operations
+      note: "policy conflict: set_git_env.sh writes git config --global; operations check_keys.sh unsets it (Mu2e/daq-operations#47)"
+      evidence: "scripts/set_git_env.sh:48"
+    - package: Bootstrap
+      note: "both ship ~/.bashrc, ~/.bash_profile and an ssh client configuration for the same hosts"
+      evidence: "install-login.sh:114"
+    - package: mu2edaq-discovery
+      note: "not used"
+  external:
+    - otsdaq (ots, setup_ots.sh sourced from the test release; scripts/setup-online.sh:156, start-daq.sh:134)
+    - tmux
+    - openssh (ssh, scp, ssh-add, ProxyJump)
+    - kerberos (klist, kinit -kt, kdestroy)
+    - git
+    - github (raw.githubusercontent.com, HTTPS)
+    - pypi (bootstrap.sh; run automatically by start-daq.sh)
+    - nmap
+    - systemd vncserver@ units on mu2e-mgr-01
+    - noVNC
+    - grafana (mu2e-dcs-01:3000)
+  python_imports_of_other_mu2edaq_packages: none   # pyproject.toml:27-34 — PyYAML, click; PyQt5 optional; pytest dev
+
+quality:
+  tests: {present: true, framework: "pytest (+ ctest wrapper)", count: 373}
+  ci:
+    present: true
+    workflows:
+      - git-whitespace.yml            # Mu2e/.github reusable: whitespace
+      - mu2e-format-single-pkg.yml    # Mu2e/.github reusable: clang-format + black on changed files
+      - track_new_issues.yml          # adds issues to org project 6
+      - track_new_prs.yml             # adds PRs to org project 6
+    runs_tests: false
+  license: MIT
+  artifacts_clean: true
+
+dedup:
+  remote_issue_count: 0   # gh issue list --state all returned [] on 2026-10-06
+  not_refiled:
+    - {id: RM-008, owner: mu2edaq-resource-manager, fingerprint: 50f56b4c,
+       action: "add the shifter-tools addendum in docs/ISSUES-PENDING.md as a comment when RM-008 is filed here"}
+
+findings:
+  - id: ST-001
+    severity: S3
+    type: bug
+    title: "[tunnels] daq-tunnels.sh restart always runs as a dry run"
+    issue: pending
+    fingerprint: eff36243
+  - id: ST-002
+    severity: S3
+    type: bug
+    title: "[create-environment] exits 0 when the helper download or the spack build fails"
+    issue: pending
+    fingerprint: 36af0985
+  - id: ST-003
+    severity: S3
+    type: bug
+    title: "[stop-daq] ots -k reaches only active_environments windows; start-daq -e windows are killed by SIGHUP"
+    issue: pending
+    fingerprint: 92169e24
+  - id: ST-004
+    severity: S3
+    type: bug
+    title: "[login] set_git_env.sh writes the operator's identity into the shared account's ~/.gitconfig"
+    issue: pending
+    fingerprint: 13cb81c1
+  - id: ST-005
+    severity: S3
+    type: bug
+    title: "[inventory] data/daq_nodes.json names hosts that are not the MC-2 readout nodes"
+    issue: pending
+    fingerprint: 3d9cdca7
+  - id: ST-006
+    severity: S3
+    type: bug
+    title: "[ssh] ssh-config-mu2e.example routes every mu2e-* host through the HEERC gateway and disables host-key checking"
+    issue: pending
+    fingerprint: c47da10d
+  - id: ST-007
+    severity: S3
+    type: bug
+    title: "[config] daq-operations.example.yaml passes \"calorimeter\" to setup_ots.sh, which accepts only \"calo\""
+    issue: pending
+    fingerprint: 7ed7d424
+  - id: ST-008
+    severity: S3
+    type: bug
+    title: "[tunnels] daq-tunnels.sh service ports disagree with every setup_ots.sh port table"
+    issue: pending
+    fingerprint: b8c8fa4b
+  - id: ST-009
+    severity: S3
+    type: bug
+    title: "[login] bashrc shared-cache detection hard-codes uid 51937 and /tmp/krb5cc_55438"
+    issue: pending
+    fingerprint: 70780e8d
+  - id: ST-010
+    severity: S3
+    type: enhancement
+    title: "[ci] 373 tests and no CI job runs them"
+    issue: pending
+    fingerprint: 5ddef9a7
+  - id: ST-011
+    severity: S3
+    type: bug
+    title: "[config] tunnels.example.yaml gives gateway01 and gateway02 the same offset; only one binds"
+    issue: pending
+    fingerprint: 9de83188
+  - id: ST-012
+    severity: S4
+    type: enhancement
+    title: "[run-control] send-run-control-command.sh is a stub that refuses with exit 3"
+    issue: pending
+    fingerprint: 70e5af3e
+  - id: ST-013
+    severity: S4
+    type: bug
+    title: "[diagnostics] daq-network-verify.sh prints no host lines in its report"
+    issue: pending
+    fingerprint: 9fa3cc94
+  - id: ST-014
+    severity: S4
+    type: bug
+    title: "[hygiene] stale aliases, a personal identity function, unchecked install status, man5 not installed"
+    issue: pending
+    fingerprint: 9a7bee14
