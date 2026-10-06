@@ -15,7 +15,7 @@
 # noVNC's "password" and "autoconnect=true" query parameters so the
 # session connects automatically instead of prompting for a password.
 #
-# Configuration precedence: command line > environment > default.
+# Configuration precedence: command line > environment > .env > default.
 #
 #   -H, --host HOST         remote host        (env NOVNC_HOST,
 #                                               default mu2e-mgr-01.fnal.gov)
@@ -39,6 +39,16 @@
 # open (macOS).
 
 set -u
+
+# Load the .env tier if the shared library is reachable. It is optional
+# here on purpose: this script must keep working when copied to a laptop
+# on its own, with nothing but bash and ssh.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+for lib in "$SCRIPT_DIR/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+    # shellcheck source=scripts/daq-common.sh
+    [ -f "$lib" ] && { . "$lib"; break; }
+done
+command -v daq_load_dotenv >/dev/null 2>&1 && daq_load_dotenv
 
 default_host="mu2e-mgr-01.fnal.gov"
 default_proxy_jump="mu2egateway01.fnal.gov"

@@ -1,0 +1,113 @@
+.TH STOP-DAQ.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+stop-daq.sh \- stop the Mu2e DAQ for one or all partitions
+.SH SYNOPSIS
+.B stop-daq.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+[\fB\-A\fR]
+[\fB\-k\fR]
+[\fB\-t\fR \fIseconds\fR]
+[\fB\-y\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B stop-daq.sh
+shuts a partition down by sending \fBots \-k\fR into each of the tmux
+windows that
+.BR start-daq.sh (1)
+created, waiting for \fBots\fR to exit, and then killing the session.
+.PP
+Windows are located by name
+(\fBdaq\-\fIpartition\fB\-\fIenvironment\fR) rather than by index, so
+a partition started with a different environment ordering, or with
+windows added by hand, still stops correctly. A window named in the
+configuration but absent from the session is reported and skipped.
+.PP
+After the transition requests are sent, the session is polled until no
+pane is still running \fBots\fR, or until the timeout expires. A
+timeout is reported as a warning and the session is killed anyway.
+Use \fB\-k\fR to skip the wait entirely.
+.PP
+Because this stops data taking, confirmation is requested unless
+\fB\-y\fR is given.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition to stop. Environment: \fBMU2EDAQ_PARTITION\fR. Default:
+\fIpartition_0\fR.
+.TP
+.BR \-A ", " \-\-all
+Stop every partition in the configuration.
+.TP
+.BR \-k ", " \-\-kill\-session
+Kill the tmux session immediately after sending \fBots \-k\fR, without
+waiting for a clean shutdown.
+.TP
+.BR \-t ", " \-\-timeout " " \fISECONDS\fR
+How long to wait for \fBots\fR to exit. Environment:
+\fBMU2EDAQ_STOP_TIMEOUT\fR. Default: \fI30\fR.
+.TP
+.BR \-y ", " \-\-yes
+Skip the confirmation prompt.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print what would be done and change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B STOP_DAQ_SH_OPTS
+Extra options, prepended to the command line. For compatibility with
+the pre-rename \fBkill_daq\fR script, \fBSTOP_DAQ_OPTS\fR and then
+\fBKILL_DAQ_OPTS\fR are consulted in that order when
+\fBSTOP_DAQ_SH_OPTS\fR is unset.
+.SH EXIT STATUS
+.TP
+.B 0
+Every targeted partition was stopped, nothing was running, or the
+operator declined at the prompt.
+.TP
+.B 1
+tmux is missing or the configuration could not be read.
+.TP
+.B 2
+A command line option was not recognised.
+.SH EXAMPLES
+Stop the default partition without prompting:
+.PP
+.RS
+.nf
+stop-daq.sh -y
+.fi
+.RE
+.PP
+Stop everything, killing the sessions outright:
+.PP
+.RS
+.nf
+stop-daq.sh -A -k -y
+.fi
+.RE
+.PP
+Allow two minutes for a clean shutdown:
+.PP
+.RS
+.nf
+stop-daq.sh -z partition_0 -t 120
+.fi
+.RE
+.SH SEE ALSO
+.BR start-daq.sh (1),
+.BR daq-status.sh (1),
+.BR daq-read-config (1),
+.BR tmux (1)

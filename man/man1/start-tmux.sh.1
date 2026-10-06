@@ -1,0 +1,76 @@
+.TH START-TMUX.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+start-tmux.sh \- build the shifter tmux workspace
+.SH SYNOPSIS
+.B start-tmux.sh
+[\fB\-s\fR \fIsession\fR]
+[\fB\-d\fR \fIdirectory\fR]
+[\fB\-a\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B start-tmux.sh
+lays out a tmux session for general shift work. The first window,
+\fBdaq\-main\fR, is split into four tiled panes; the second,
+\fBbuild\fR, into two side by side.
+.PP
+.RS
+.nf
+|---------------------------|---------------------------|
+| main                      | monitor                   |
+|---------------------------|---------------------------|
+| env A                     | env B                     |
+|---------------------------|---------------------------|
+.fi
+.RE
+.PP
+This command only creates panes; it starts no DAQ processes. It is
+independent of
+.BR start-daq.sh (1),
+which builds its own session, and both can be running at once.
+.PP
+If the session already exists it is left alone, and \fB\-a\fR attaches
+to it.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-s ", " \-\-session " " \fINAME\fR
+Session name. Environment: \fBMU2EDAQ_TMUX_SESSION\fR. Default:
+\fIdaq\fR.
+.TP
+.BR \-d ", " \-\-directory " " \fIDIR\fR
+Starting directory for every pane. Environment:
+\fBMU2EDAQ_TMUX_CWD\fR. Default: the current directory.
+.TP
+.BR \-a ", " \-\-attach
+Attach once the layout is built.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the tmux commands and create nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B START_TMUX_SH_OPTS
+Extra options, prepended to the command line.
+.SH EXIT STATUS
+Returns 0 on success or when the session already existed, 1 if tmux is
+missing or the starting directory does not exist, and 2 for an
+unrecognised option.
+.SH EXAMPLES
+Build the workspace in the shifter's home directory and attach:
+.PP
+.RS
+.nf
+start-tmux.sh -d ~ -a
+.fi
+.RE
+.SH SEE ALSO
+.BR start-daq.sh (1),
+.BR daq-status.sh (1),
+.BR tmux (1)

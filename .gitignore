@@ -1,3 +1,27 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+
+# Local configuration and secrets
+.env
+config/current_release.yaml
+
+# Runtime state and diagnostics
+core/*
+!core/.gitkeep
+.open_tunnel_pids
+arp_table.txt
+routing_table.txt
+filtered_arp_table.txt
+ls-output.json

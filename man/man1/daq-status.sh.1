@@ -1,0 +1,106 @@
+.TH DAQ-STATUS.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-status.sh \- report which DAQ partitions and environments are running
+.SH SYNOPSIS
+.B daq-status.sh
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+[\fB\-j\fR]
+[\fB\-q\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B daq-status.sh
+cross-checks the operations configuration against the live tmux state
+and prints one row per partition and active environment. It is
+strictly read-only and safe to run against a partition that is taking
+data.
+.PP
+Each environment is reported in one of four states:
+.TP
+.B RUNNING
+The tmux window exists and \fBots\fR is the current command in one of
+its panes.
+.TP
+.B STOPPED
+The window exists but \fBots\fR is not running in it \(em typically a
+crashed or manually exited instance.
+.TP
+.B NO-WINDOW
+The session exists but this environment has no window, so it was never
+started or its window was killed.
+.TP
+.B NO-SESSION
+There is no tmux session for the partition at all.
+.PP
+A trailing summary lists the live \fBdaq\-*\fR tmux sessions with
+their window counts and creation times.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then config file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Report only this partition. Environment: \fBMU2EDAQ_PARTITION\fR.
+Default: every configured partition.
+.TP
+.BR \-j ", " \-\-json
+Emit JSON instead of the table, for scripted consumers.
+.TP
+.BR \-q ", " \-\-quiet
+Print nothing. Exit 0 only if every active environment is
+\fBRUNNING\fR, making the command usable as a health check.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
+.SH ENVIRONMENT
+.TP
+.B DAQ_STATUS_SH_OPTS
+Extra options, prepended to the command line.
+.SH EXIT STATUS
+.TP
+.B 0
+The report was produced; with \fB\-q\fR, every active environment is
+running.
+.TP
+.B 1
+tmux is missing, the configuration could not be read, or, with
+\fB\-q\fR, at least one environment is not running.
+.TP
+.B 2
+A command line option was not recognised.
+.SH EXAMPLES
+Show every partition:
+.PP
+.RS
+.nf
+daq-status.sh
+.fi
+.RE
+.PP
+Use it as a health check in a monitoring script:
+.PP
+.RS
+.nf
+if ! daq-status.sh -q -z partition_0; then
+    echo "partition_0 is not fully up"
+fi
+.fi
+.RE
+.PP
+Feed the state to another tool:
+.PP
+.RS
+.nf
+daq-status.sh --json | jq -r '.environments[] | select(.state != "RUNNING") | .environment'
+.fi
+.RE
+.SH SEE ALSO
+.BR start-daq.sh (1),
+.BR stop-daq.sh (1),
+.BR daq-read-config (1),
+.BR tmux (1)

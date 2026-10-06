@@ -1,0 +1,114 @@
+.TH BOOTSTRAP.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+bootstrap.sh \- create the Python virtual environment for the shifter tools
+.SH SYNOPSIS
+.B bootstrap.sh
+[\fB\-d\fR]
+[\fB\-e\fR]
+[\fB\-G\fR]
+[\fB\-u\fR]
+[\fB\-p\fR \fIpython\fR]
+[\fB\-f\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B bootstrap.sh
+creates \fIvenv/\fR in the installation root and installs the Python
+dependencies into it. Python 3.9 or newer is required and the version
+is checked before anything is created.
+.PP
+It also seeds a \fI.env\fR from \fI.env.example\fR if none exists,
+never overwriting one that does.
+.PP
+Only the Python half of the toolkit needs this environment:
+.BR daq-read-config (1),
+.BR daq-open-tunnels (1),
+.BR daq-cluster-cp (1),
+.BR daq-ls2json (1)
+and
+.BR daq-install-tools (1).
+The shell commands that read the operations YAML reach it through
+.BR daq-read-config (1)
+and so need the venv indirectly;
+.BR daq-tunnels.sh (1),
+.BR manage-vnc-servers.sh (1)
+and
+.BR start-novnc-connection.sh (1)
+have no Python dependency at all and work on a bare laptop.
+.PP
+.BR start-daq.sh (1)
+runs this script automatically when it finds the dependencies missing.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR \-d ", " \-\-dev
+Also install \fBpytest\fR, so the test suite can be run.
+.TP
+.BR \-e ", " \-\-editable
+Also \fBpip install \-e .\fR, which puts the \fBdaq\-*\fR commands on
+the venv's PATH. Without it the commands are still reachable, because
+the shell wrappers fall back to running the package out of \fIsrc/\fR.
+.TP
+.BR \-G ", " \-\-no\-gui
+Skip PyQt5. Use this on headless DAQ nodes; the only feature lost is
+.BR "daq-open-tunnels \-\-gui" .
+.TP
+.BR \-u ", " \-\-upgrade
+Pass \fB\-\-upgrade\fR to pip, so already-installed dependencies are
+brought up to date.
+.TP
+.BR \-p ", " \-\-python " " \fIPYTHON\fR
+Interpreter used to create the venv. Environment: \fBPYTHON\fR.
+Default: \fIpython3\fR.
+.TP
+.BR \-f ", " \-\-force
+Delete an existing \fIvenv/\fR and build it again from scratch.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH FILES
+.TP
+.I requirements.txt
+The dependency list installed into the venv.
+.TP
+.I pyproject.toml
+Package metadata, used by \fB\-\-editable\fR.
+.TP
+.I .env
+Created from \fI.env.example\fR on first run.
+.SH EXIT STATUS
+Returns 0 on success, 1 if the interpreter is missing or older than
+3.9, and 2 for an unrecognised option. A pip failure propagates,
+because the script runs under \fBset \-e\fR.
+.SH EXAMPLES
+Set up for development, with the commands on the PATH and pytest
+available:
+.PP
+.RS
+.nf
+\&./bootstrap.sh --dev --editable
+source venv/bin/activate
+python -m pytest
+.fi
+.RE
+.PP
+Set up a headless DAQ node:
+.PP
+.RS
+.nf
+\&./bootstrap.sh --no-gui
+.fi
+.RE
+.PP
+Rebuild the environment with a specific interpreter:
+.PP
+.RS
+.nf
+\&./bootstrap.sh --force --python /usr/bin/python3.9
+.fi
+.RE
+.SH SEE ALSO
+.BR install-login.sh (1),
+.BR daq-read-config (1),
+.BR python3 (1),
+.BR pip (1)

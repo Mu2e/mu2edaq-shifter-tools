@@ -1,0 +1,101 @@
+.TH MU2EDAQ_SHIFTER_TOOLS 3 "2026-09-10" "mu2edaq-shifter-tools" "Library Functions"
+.SH NAME
+mu2edaq_shifter_tools \- Python API for the Mu2e DAQ shifter tools
+.SH SYNOPSIS
+.nf
+.B import mu2edaq_shifter_tools
+.B from mu2edaq_shifter_tools import config
+.B from mu2edaq_shifter_tools.config import Operations
+.fi
+.SH DESCRIPTION
+The
+.B mu2edaq_shifter_tools
+package holds the Python half of the toolkit. Every command line entry
+point is a thin
+.BR click (3)
+wrapper over importable functions, so the same logic is available to
+other Mu2e software without shelling out.
+.PP
+The package lives under \fIsrc/\fR and is installed from
+\fIpyproject.toml\fR. It requires Python 3.9 or newer and depends only
+on \fBPyYAML\fR and \fBclick\fR; \fBPyQt5\fR is an optional extra used
+by one flag of one command.
+.SH MODULES
+.TP
+.B mu2edaq_shifter_tools.config
+Configuration discovery, loading and precedence, plus the
+\fBOperations\fR accessor class over the operations YAML. This is the
+module other code is most likely to want. See
+.BR mu2edaq_shifter_tools_config (3).
+.TP
+.B mu2edaq_shifter_tools.read_config
+Implements
+.BR daq-read-config (1).
+\fBVERBS\fR maps every command verb to its description and is the
+single source of truth for that list.
+.TP
+.B mu2edaq_shifter_tools.open_tunnels
+Implements
+.BR daq-open-tunnels (1).
+Useful pieces:
+\fBdefault_base_port()\fR,
+\fBssh_command(tunnel, base_port, username)\fR,
+\fBread_state(path)\fR and \fBwrite_state(path, records)\fR,
+\fBprocess_alive(pid)\fR.
+.TP
+.B mu2edaq_shifter_tools.cluster_cp
+Implements
+.BR daq-cluster-cp (1).
+\fBload_nodes(path)\fR returns the node inventory and
+\fBselect_hosts(nodes, groups, want_all)\fR resolves group flags to a
+de-duplicated, stably ordered host list.
+.TP
+.B mu2edaq_shifter_tools.ls2json
+Implements
+.BR daq-ls2json (1).
+\fBlisting(directories, include_dirs=False)\fR returns the structure
+that the command serialises.
+.TP
+.B mu2edaq_shifter_tools.install_daq_tools
+Implements
+.BR daq-install-tools (1).
+\fBbuild_version_string(version)\fR renders a structured version, and
+\fBrelease_paths(config)\fR expands \fBinstall_path\fR into concrete
+directories.
+.SH ATTRIBUTES
+.TP
+.B __version__
+The package version, kept in step with \fIpyproject.toml\fR and the
+CMake project version.
+.SH EXAMPLES
+Read the operations configuration and report every gateway port:
+.PP
+.RS
+.nf
+from mu2edaq_shifter_tools.config import Operations
+
+ops = Operations.load()
+for partition in ops.partitions():
+    for env in ops.active_environments(partition):
+        print(partition, env, ops.gateway_port(partition, env))
+.fi
+.RE
+.PP
+Resolve the cluster host list without copying anything:
+.PP
+.RS
+.nf
+from mu2edaq_shifter_tools import cluster_cp
+
+nodes = cluster_cp.load_nodes()
+hosts = cluster_cp.select_hosts(nodes, ["trk", "calo"], False)
+.fi
+.RE
+.SH SEE ALSO
+.BR mu2edaq_shifter_tools_config (3),
+.BR daq-common.sh (3),
+.BR daq-read-config (1),
+.BR daq-open-tunnels (1),
+.BR daq-cluster-cp (1),
+.BR daq-ls2json (1),
+.BR daq-install-tools (1)

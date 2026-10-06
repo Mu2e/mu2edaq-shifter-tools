@@ -1,0 +1,164 @@
+.TH DAQ-OPEN-TUNNELS 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-open-tunnels \- open, list and tear down the shifter SSH tunnels
+.SH SYNOPSIS
+.B daq-open-tunnels
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-s\fR \fIstate\fR]
+[\fB\-b\fR \fIbase\fR]
+[\fB\-u\fR \fIuser\fR]
+[\fB\-\-gui\fR]
+[\fB\-n\fR]
+{\fBopen\fR|\fBkill\fR|\fBlist\fR}
+.SH DESCRIPTION
+.B daq-open-tunnels
+manages the SSH local forwards described in \fIconfig/tunnels.yaml\fR.
+Each running tunnel is recorded in a state file so that \fBlist\fR and
+\fBkill\fR can find it again from a later shell.
+.PP
+The local port of a tunnel is
+.PP
+.RS
+.nf
+base_port + port
+.fi
+.RE
+.PP
+where \fIport\fR is the entry's offset and \fIbase_port\fR defaults to
+the caller's uid plus 973 (Mu2e is E-973). Deriving it from the uid
+keeps concurrent users on a shared shifter machine out of each other's
+way without any coordination.
+.PP
+Before opening anything, the resolved local ports are checked for
+collisions. Two entries landing on one port cannot both be forwarded,
+and because \fBExitOnForwardFailure\fR is set the second ssh simply
+dies; a warning names the entries involved rather than leaving that to
+be discovered later.
+.PP
+This command manages the tunnels defined in YAML. For the fixed set of
+control-room GUI forwards, use
+.BR daq-tunnels.sh (1)
+instead.
+.SH ACTIONS
+.TP
+.B open
+Start every tunnel in the configuration. Tunnels already recorded and
+alive are left running and reported.
+.TP
+.B kill
+Send \fBSIGTERM\fR to every recorded tunnel and rewrite the state file
+with whatever survived.
+.TP
+.B list
+Show each recorded tunnel with its pid, host, local port and whether
+the process is still alive. This is the default action.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Tunnel definitions to read. Environment: \fBMU2EDAQ_TUNNELS\fR.
+Default: the first \fItunnels.yaml\fR on the config search path.
+.TP
+.BR \-s ", " \-\-state\-file " " \fIFILE\fR
+Where running tunnels are recorded. Environment:
+\fBMU2EDAQ_TUNNEL_STATE\fR. Default: \fI~/.mu2edaq/open_tunnels\fR.
+.TP
+.BR \-b ", " \-\-base\-port " " \fIN\fR
+Local port base. Environment: \fBMU2EDAQ_TUNNEL_BASE_PORT\fR. Default:
+uid + 973.
+.TP
+.BR \-u ", " \-\-user " " \fIUSER\fR
+Override the ssh username for every tunnel, ignoring the per-entry
+\fBusername\fR.
+.TP
+.B \-\-gui
+With \fBlist\fR, show the tunnels in a Qt dialog instead of on the
+terminal. Requires PyQt5, which
+.BR bootstrap.sh (1)
+installs unless \fB\-\-no\-gui\fR was used. PyQt is imported only when
+this flag is given, so the rest of the command works on a text-only
+session.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print the ssh command lines and change nothing.
+.TP
+.B \-\-version
+Print the package version and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH CONFIGURATION
+Each entry of \fItunnels.yaml\fR takes:
+.TP
+.B hostname
+Host to ssh to. Required.
+.TP
+.B port
+Port offset, added to the base port. Required.
+.TP
+.B username
+SSH user. Defaults to \fB$USER\fR.
+.TP
+.B remote
+Host the far end of the forward connects to. Defaults to
+\fIlocalhost\fR.
+.TP
+.B jump
+ProxyJump host. Optional.
+.TP
+.B label
+Name shown by \fBlist\fR. Optional.
+.PP
+A bare list of entries is accepted as well as a mapping with a
+\fBtunnels:\fR key, and because JSON is valid YAML the historical
+\fItunnels.json\fR still loads.
+.SH FILES
+.TP
+.I config/tunnels.yaml
+Tunnel definitions.
+.TP
+.I ~/.mu2edaq/open_tunnels
+Recorded tunnels, as \fBpid, hostname, username, local_port, label\fR.
+The older four-field format without \fBlabel\fR is still read.
+.SH EXIT STATUS
+Returns 0 on success, and 1 when the configuration cannot be read or
+ssh cannot be started. With \fB\-\-gui\fR, 1 also means PyQt5 is not
+installed.
+.SH EXAMPLES
+Open every tunnel and check it came up:
+.PP
+.RS
+.nf
+daq-open-tunnels open
+daq-open-tunnels list
+.fi
+.RE
+.PP
+See the command lines without connecting:
+.PP
+.RS
+.nf
+daq-open-tunnels --dry-run open
+.fi
+.RE
+.PP
+Use a fixed port base, so the ports are the same for everyone:
+.PP
+.RS
+.nf
+daq-open-tunnels --base-port 1973 open
+.fi
+.RE
+.PP
+Close them:
+.PP
+.RS
+.nf
+daq-open-tunnels kill
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-tunnels.sh (1),
+.BR start-novnc-connection.sh (1),
+.BR ssh (1)

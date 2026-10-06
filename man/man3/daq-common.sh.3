@@ -1,0 +1,185 @@
+.TH DAQ-COMMON.SH 3 "2026-09-10" "mu2edaq-shifter-tools" "Library Functions"
+.SH NAME
+daq-common.sh \- shared shell library for the Mu2e DAQ shifter tools
+.SH SYNOPSIS
+.nf
+.B source "$(dirname "$0")/daq-common.sh"
+.fi
+.SH DESCRIPTION
+.B daq-common.sh
+is sourced, never executed. It provides the pieces every shifter script
+needs and that were previously copy-pasted into each one: the
+artdaq-style option-parser block existed in four separate copies before
+this library replaced it.
+.PP
+Its Python counterpart is
+.BR mu2edaq_shifter_tools_config (3);
+the two implement the same precedence and the same search path, so a
+shell command and a Python command resolve a setting identically.
+.PP
+Sourcing it twice is a no-op: it returns early when
+\fB_DAQ_COMMON_SH_LOADED\fR is already set.
+.SS Locating the library
+A script finds it by looking next to itself, then in \fIscripts/\fR
+relative to itself (for the top-level commands), then in
+\fI~/bin\fR (for an installed copy):
+.PP
+.RS
+.nf
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+for lib in "$SCRIPT_DIR/daq-common.sh" "$HOME/bin/daq-common.sh"; do
+    [ -f "$lib" ] && { . "$lib"; break; }
+done
+[ -n "${_DAQ_COMMON_SH_LOADED:-}" ] || {
+    echo "$0: cannot find daq-common.sh" >&2; exit 1; }
+.fi
+.RE
+.SH FUNCTIONS
+.SS Diagnostics
+.TP
+.B daq_warn \fImessage\fR
+Print \fI$DAQ_PROG: message\fR on stderr. Scripts set \fBDAQ_PROG\fR to
+their own name after sourcing.
+.TP
+.B daq_die \fImessage\fR
+\fBdaq_warn\fR, then exit with \fB$DAQ_EXIT_CODE\fR (default 1).
+.TP
+.B daq_status_line \fIstatus label\fR
+Print \fIlabel\fB: \fRfollowed by \fBPass\fR in green when
+\fIstatus\fR is 0, or \fBFail\fR in red otherwise. Used by the
+login-time Kerberos and git scripts.
+.SS Installation root
+.TP
+.B daq_repo_root
+Echo the installation root: \fB$MU2EDAQ_ROOT\fR if set, else the first
+ancestor of this library containing
+\fIconfig/daq\-operations.example.yaml\fR, else
+\fI~/daq\-shifter\-tools\fR.
+.SS Environment files
+.TP
+.B daq_load_dotenv \fR[\fIfile\fR]
+Export \fBKEY=VALUE\fR settings from the \fI.env\fR files. Variables
+already present in the environment are left alone, so the environment
+outranks \fI.env\fR, and an earlier file outranks a later one.
+.IP
+With no argument the files read are \fB$MU2EDAQ_DOTENV\fR,
+\fI~/.mu2edaq/env\fR, \fI<root>/.env\fR and \fI./.env\fR.
+\fI~/.mu2edaq/env\fR is where
+.BR install-login.sh (1)
+records \fBMU2EDAQ_ROOT\fR, which is how a command in \fI~/bin\fR finds
+its config and data.
+.IP
+An \fBexport\fR prefix and one layer of matching quotes are tolerated;
+blanks, comments and keys that are not shell identifiers are ignored.
+.SS Configuration files
+.TP
+.B daq_config_path
+Echo the config search path, one absolute directory per line:
+\fB$MU2EDAQ_CONFIG_DIR\fR, \fI$PWD/config\fR, \fI<root>/config\fR,
+\fI~/.config/mu2edaq\fR, \fI/etc/mu2edaq\fR.
+.TP
+.B daq_config_file \fIname\fR [\fIexplicit\fR]
+Echo the path of a config file. A non-empty \fIexplicit\fR is used
+as-is, with a leading \fB~/\fR expanded, and must exist. Otherwise
+\fIname\fR is looked for on \fBdaq_config_path\fR. Returns 1 and prints
+the search path on stderr when nothing is found.
+.IP
+The tilde expansion is done explicitly because the pattern in
+\fB${var#~/}\fR is itself tilde-expanded by bash, which is what broke
+the original scripts' default config path.
+.SS Python
+.TP
+.B daq_python
+Echo the interpreter to use: \fI<root>/venv/bin/python\fR if the venv
+has been bootstrapped, else \fB$PYTHON\fR, else \fBpython3\fR.
+.TP
+.B daq_require_python_deps
+Return 0 if \fBPyYAML\fR and \fBclick\fR are importable, trying
+\fI<root>/src\fR on \fBPYTHONPATH\fR as well. Otherwise warn, naming
+\fBbootstrap.sh\fR, and return non-zero.
+.TP
+.B daq_run_tool \fImodule console\fR [\fIargs\fR...]
+Run one tool from the package, preferring the venv's console script,
+then one on \fBPATH\fR, then \fBpython \-m
+mu2edaq_shifter_tools.\fImodule\fR with \fI<root>/src\fR on
+\fBPYTHONPATH\fR. That last fallback is what lets an un-installed
+checkout work.
+.TP
+.B daq_read_config \fR[\fIargs\fR...]
+Shorthand for \fBdaq_run_tool read_config daq\-read\-config\fR. This is
+how every shell command reads the operations YAML.
+.SS Options
+.TP
+.B daq_script_opts \fR[\fIprog\fR]
+Echo the contents of \fB$<PROG>_OPTS\fR so options can come from the
+environment as well as the command line. The name is the program with
+\fB.\fR and \fB\-\fR mapped to \fB_\fR and upper-cased, so
+\fBstart\-daq.sh\fR reads \fBSTART_DAQ_SH_OPTS\fR. The pre-rename name
+(\fBSTART_DAQ_OPTS\fR) is used only when the modern one is unset.
+.IP
+Scripts apply it as:
+.PP
+.RS
+.nf
+eval set -- $(daq_script_opts start-daq.sh) '"$@"'
+.fi
+.RE
+.SS Confirmation
+.TP
+.B daq_confirm \fIassume_yes prompt\fR
+Return 0 immediately when \fIassume_yes\fR is \fB1\fR, otherwise prompt
+and return 0 only on \fBy\fR or \fByes\fR. Used before anything that
+can interrupt data taking.
+.SH VARIABLES
+.TP
+.B _DAQ_COMMON_SH_LOADED
+Set to 1 once the library is sourced. Also the flag a script checks to
+confirm the library was found.
+.TP
+.B DAQ_PROG
+The calling script's name, used in diagnostics and as the default for
+\fBdaq_script_opts\fR.
+.TP
+.B DAQ_EXIT_CODE
+Exit status used by \fBdaq_die\fR. Default 1.
+.SH PORTABILITY
+The library and the scripts that use it avoid \fBmapfile\fR and
+unguarded empty-array expansion, both of which fail under the bash 3.2
+that ships as the system shell on macOS. Empty arrays are expanded as
+\fB${a[@]+"${a[@]}"}\fR.
+.SH EXAMPLES
+A minimal command built on the library:
+.PP
+.RS
+.nf
+#!/usr/bin/env bash
+set -u
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+. "$SCRIPT_DIR/daq-common.sh"
+
+DAQ_PROG="my-tool.sh"
+daq_load_dotenv
+
+config="${MU2EDAQ_CONFIG:-}"
+partition="${MU2EDAQ_PARTITION:-partition_0}"
+
+eval set -- $(daq_script_opts my-tool.sh) '"$@"'
+while [ -n "${1:-}" ]; do
+    case "$1" in
+        -c|--config)    shift; config="${1:-}";;
+        -z|--partition) shift; partition="${1:-}";;
+        *)              daq_die "unknown option: $1";;
+    esac
+    shift
+done
+
+config_file="$(daq_config_file daq-operations.yaml "$config")" || exit 1
+daq_read_config --config "$config_file" -z "$partition" active-envs
+.fi
+.RE
+.SH SEE ALSO
+.BR mu2edaq_shifter_tools_config (3),
+.BR mu2edaq_shifter_tools (3),
+.BR daq-read-config (1),
+.BR install-login.sh (1),
+.BR bootstrap.sh (1)

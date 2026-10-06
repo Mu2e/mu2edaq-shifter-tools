@@ -1,0 +1,36 @@
+# SSH tunnel definitions for the Mu2e shifter GUIs.
+#
+# Used by daq-open-tunnels (src/mu2edaq_shifter_tools/open_tunnels.py).
+# Copy to tunnels.yaml and edit, or point $MU2EDAQ_TUNNELS at your own
+# copy.
+#
+# Each entry describes one local forward. The local port is
+#
+#     base_port + port
+#
+# where base_port defaults to uid + 973 (Mu2e is E-973), keeping the
+# local ports of different users on a shared machine from colliding.
+# Override it with --base-port or $MU2EDAQ_TUNNEL_BASE_PORT.
+#
+#   hostname  host to ssh to                     (required)
+#   port      port offset, added to base_port     (required)
+#   username  ssh user            (default: $USER, or --user)
+#   remote    host the remote end connects to     (default localhost)
+#   jump      ProxyJump host                      (optional)
+#   label     name shown by "daq-open-tunnels list"   (optional)
+
+tunnels:
+  - label: daq-gateway
+    hostname: mu2edaq-gateway.fnal.gov
+    username: mu2edaq
+    port: 3201
+
+  - label: gateway01
+    hostname: mu2egateway01.fnal.gov
+    username: mu2edaq
+    port: 3203
+
+  - label: gateway02
+    hostname: mu2egateway02.fnal.gov
+    username: mu2edaq
+    port: 3203

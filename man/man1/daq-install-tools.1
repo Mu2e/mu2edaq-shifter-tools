@@ -1,0 +1,108 @@
+.TH DAQ-INSTALL-TOOLS 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-install-tools \- validate a DAQ release description and its install tree
+.SH SYNOPSIS
+.B daq-install-tools
+[\fB\-f\fR \fIfile\fR]
+[\fB\-M\fR]
+[\fB\-O\fR]
+[\fB\-n\fR]
+.SH DESCRIPTION
+.B daq-install-tools
+reads a release description YAML, renders the base and test release
+version strings from it, and checks that every path it names exists.
+With \fB\-\-makedirs\fR it creates the install directories that are
+missing.
+.PP
+Release versions are written as structured fields rather than as
+strings, so they can be compared and re-rendered:
+.PP
+.RS
+.nf
+base_release:
+  prefix: d
+  major: 9
+  minor: 0
+  patch: 0
+  suffix: ""
+  path: /mu2e/releases/v9_00_00
+.fi
+.RE
+.PP
+which renders as \fBd09_00_00\fR. Numeric components are zero-padded to
+two digits; an empty \fBsuffix\fR leaves no trailing underscore, and a
+missing field falls back to the schema default, so a description that
+pins only \fBmajor\fR still produces a usable string.
+.PP
+\fBinstall_path.basepath\fR is the install root, and every other key
+under \fBinstall_path\fR is joined onto it, so \fBbin: "bin"\fR under a
+basepath of \fI/home/mu2edaq/daq\-tools\fR means
+\fI/home/mu2edaq/daq\-tools/bin\fR.
+.PP
+Note that this command validates and prepares; it does not itself copy
+any files. Use
+.BR install-login.sh (1)
+to deploy into an account, or \fBcmake \-\-install\fR to deploy into a
+prefix.
+.SH OPTIONS
+.TP
+.BR \-f ", " \-\-release\-file " " \fIFILE\fR
+Release description to read. Default: the first
+\fIcurrent_release.yaml\fR on the config search path. A worked example
+ships as \fIconfig/current_release.example.yaml\fR.
+.TP
+.BR \-M ", " \-\-makedirs
+Create the install directories that do not exist.
+.TP
+.BR \-O ", " \-\-override
+Warn instead of failing when a release path is missing. Without it, a
+missing base or test release path is fatal.
+.TP
+.BR \-n ", " \-\-dry\-run
+Report only; print what \fB\-\-makedirs\fR would create without
+creating it.
+.TP
+.B \-\-version
+Print the package version and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+The description is consistent, or \fB\-\-override\fR suppressed the
+path problems.
+.TP
+.B 1
+The description could not be read, a required field is missing, a
+release path does not exist and \fB\-\-override\fR was not given, or a
+directory could not be created.
+.SH EXAMPLES
+Check the current release description:
+.PP
+.RS
+.nf
+daq-install-tools
+.fi
+.RE
+.PP
+Prepare the install tree, showing what would be created first:
+.PP
+.RS
+.nf
+daq-install-tools --makedirs --dry-run
+daq-install-tools --makedirs
+.fi
+.RE
+.PP
+Inspect a description whose releases are not mounted here:
+.PP
+.RS
+.nf
+daq-install-tools -f config/current_release.example.yaml --override
+.fi
+.RE
+.SH SEE ALSO
+.BR create-environment.sh (1),
+.BR install-login.sh (1),
+.BR daq-read-config (1)

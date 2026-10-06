@@ -1,0 +1,108 @@
+.TH INSTALL-LOGIN.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+install-login.sh \- install the shifter login environment and commands
+.SH SYNOPSIS
+.B install-login.sh
+[\fB\-d\fR \fIhome\fR]
+[\fB\-b\fR \fIbin\fR]
+[\fB\-r\fR \fIroot\fR]
+[\fB\-N\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B install-login.sh
+deploys the toolkit into a shifter account:
+.TP
+.I login/*
+installed into the home directory with a leading dot, so
+\fIlogin/bashrc\fR becomes \fI~/.bashrc\fR, mode 644.
+.TP
+.I scripts/*
+installed into \fI~/bin\fR, mode 755. This is why a helper that
+shifters should be able to invoke by name belongs in \fIscripts/\fR.
+.TP
+.I start-daq.sh, stop-daq.sh
+the top-level start/stop pair, also installed into \fI~/bin\fR.
+.TP
+.I ~/.mu2edaq/env
+written with \fBMU2EDAQ_ROOT\fR set to this checkout.
+.PP
+That last file matters: a command sitting in \fI~/bin\fR cannot find
+\fIconfig/\fR and \fIdata/\fR by walking up from itself, so the root is
+recorded where both
+.BR daq-common.sh (3)
+and the Python config module look for it. Values in that file rank
+below the real environment, so exporting \fBMU2EDAQ_ROOT\fR still wins.
+.PP
+\fI~/bin\fR is added to \fBPATH\fR by the installed
+\fI~/.bash_profile\fR, so the commands appear after the next login.
+.PP
+Every file that would be overwritten is first copied to
+\fI<file>.bak.<timestamp>\fR.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then built-in default.
+.TP
+.BR \-d ", " \-\-home " " \fIDIR\fR
+Install the dotfiles into \fIDIR\fR. Environment:
+\fBMU2EDAQ_INSTALL_HOME\fR. Default: \fB$HOME\fR.
+.TP
+.BR \-b ", " \-\-bin " " \fIDIR\fR
+Install the commands into \fIDIR\fR. Environment:
+\fBMU2EDAQ_INSTALL_BIN\fR. Default: \fI<home>/bin\fR.
+.TP
+.BR \-r ", " \-\-root " " \fIDIR\fR
+Record \fIDIR\fR as \fBMU2EDAQ_ROOT\fR instead of this checkout. Useful
+when installing from a build tree that will be moved.
+.TP
+.BR \-N ", " \-\-no\-env
+Do not write \fI<home>/.mu2edaq/env\fR.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print every action and change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH NOTES
+The installed \fI~/.bash_profile\fR performs the Kerberos and git
+bootstrap in a fixed order that must not be rearranged; see
+.BR get_krb_daq_principal.sh (1)
+and the ARCHITECTURE document for why.
+.PP
+Renaming \fBget_krb_daq_principle.sh\fR to
+\fBget_krb_daq_principal.sh\fR means an account installed from an older
+checkout keeps a stale copy of the old name in \fI~/bin\fR. It is inert
+and can be deleted.
+.SH EXIT STATUS
+Returns 0 on success or after a dry run, 1 if \fIlogin/\fR or
+\fIscripts/\fR is missing, and 2 for an unrecognised option.
+.SH EXAMPLES
+See exactly what would be installed:
+.PP
+.RS
+.nf
+\&./install-login.sh --dry-run
+.fi
+.RE
+.PP
+Install for real:
+.PP
+.RS
+.nf
+\&./install-login.sh
+.fi
+.RE
+.PP
+Stage an install into a scratch directory:
+.PP
+.RS
+.nf
+\&./install-login.sh -d /tmp/stage -b /tmp/stage/bin
+.fi
+.RE
+.SH SEE ALSO
+.BR bootstrap.sh (1),
+.BR get_krb_principal.sh (1),
+.BR get_krb_daq_principal.sh (1),
+.BR set_git_env.sh (1),
+.BR daq-common.sh (3)

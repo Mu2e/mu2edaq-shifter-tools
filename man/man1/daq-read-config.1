@@ -1,0 +1,160 @@
+.TH DAQ-READ-CONFIG 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+daq-read-config \- query the DAQ operations configuration
+.SH SYNOPSIS
+.B daq-read-config
+[\fB\-c\fR \fIconfig\fR]
+[\fB\-z\fR \fIpartition\fR]
+[\fB\-e\fR \fIenvironment\fR]
+[\fB\-\-json\fR]
+[\fIverb\fR]
+.br
+.B daq-read-config
+\fB\-\-list\-verbs\fR
+.SH DESCRIPTION
+.B daq-read-config
+prints one value out of the DAQ operations YAML, selected by a
+\fIcommand verb\fR.
+.PP
+This is the only thing in the toolkit that parses the operations
+configuration. The shell commands do not read YAML themselves; they
+call this tool once per value they need. The consequence for
+maintenance is that
+.B adding a new configuration field means adding a verb here,
+not adding a parser to the calling script.
+.PP
+Text output is deliberately bare \(em no labels, no quoting \(em
+because callers capture it with command substitution. A list is printed
+space-separated on one line, which is what the callers' \fBfor\fR loops
+expect. Use \fB\-\-json\fR for a structured consumer.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-c ", " \-\-config " " \fIFILE\fR
+Operations YAML to read. Environment: \fBMU2EDAQ_CONFIG\fR. Default:
+the first \fIdaq\-operations.yaml\fR on the config search path.
+.TP
+.BR \-z ", " \-\-partition " " \fINAME\fR
+Partition to query. Environment: \fBMU2EDAQ_PARTITION\fR. Default:
+\fIpartition_0\fR.
+.TP
+.BR \-e ", " \-\-environment " " \fINAME\fR
+Environment to query. Environment: \fBMU2EDAQ_ENVIRONMENT\fR. For the
+verbs that need one, this defaults to the partition's first active
+environment.
+.TP
+.B \-\-json
+Emit JSON instead of bare text.
+.TP
+.B \-\-list\-verbs
+Print every verb and its description, tab-separated, and exit.
+.TP
+.B \-\-version
+Print the package version and exit.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary, including the verb table, and exit.
+.SH COMMAND VERBS
+.TP
+.B print
+The whole configuration. This is the default verb.
+.TP
+.B config-file
+Path of the configuration file actually used, after the search.
+.TP
+.B config-path
+The configuration search path, one directory per line. Works even when
+no configuration file exists.
+.TP
+.B partitions
+Names of every configured partition.
+.TP
+.B environments
+Every environment defined in the partition.
+.TP
+.B active-envs
+The partition's \fBactive_environments\fR, or every environment if the
+partition does not list them.
+.TP
+.B base-release
+The partition's base release path.
+.TP
+.B directory
+The environment's \fBtest_rel_path\fR.
+.TP
+.B setup
+The environment's \fBsetup_cmd\fR, arguments included.
+.TP
+.B port-offset
+The environment's \fBport_offset\fR.
+.TP
+.B ots-port-offset
+The partition's \fBots_port_offset\fR.
+.TP
+.B gateway-port
+\fBots_port_offset\fR + \fBport_offset\fR, which is how ots derives the
+environment's gateway port.
+.TP
+.B resource-manager-port
+The ResourceManager port. Defaults to 1973, Mu2e being E-973.
+.SH CONFIGURATION SEARCH PATH
+Searched in order, first match wins:
+.PP
+.RS
+.nf
+$MU2EDAQ_CONFIG_DIR
+\&./config
+$MU2EDAQ_ROOT/config
+~/.config/mu2edaq
+/etc/mu2edaq
+.fi
+.RE
+.PP
+\fBMU2EDAQ_ROOT\fR is taken from the environment if set, otherwise
+found by walking up from the installed package looking for
+\fIconfig/daq\-operations.example.yaml\fR, otherwise
+\fI~/daq\-shifter\-tools\fR.
+.SH EXIT STATUS
+.TP
+.B 0
+The value was printed.
+.TP
+.B 1
+The configuration file, partition, or environment could not be
+resolved.
+.TP
+.B 2
+The verb or an option was not recognised.
+.SH EXAMPLES
+Loop over a partition's active environments, as the shell commands do:
+.PP
+.RS
+.nf
+for env in $(daq-read-config -z partition_0 active-envs); do
+    echo "$env -> $(daq-read-config -z partition_0 -e "$env" gateway-port)"
+done
+.fi
+.RE
+.PP
+Find out which configuration file is in effect:
+.PP
+.RS
+.nf
+daq-read-config config-file
+.fi
+.RE
+.PP
+Dump everything for inspection:
+.PP
+.RS
+.nf
+daq-read-config --json print | jq .
+.fi
+.RE
+.SH SEE ALSO
+.BR start-daq.sh (1),
+.BR stop-daq.sh (1),
+.BR setup-online.sh (1),
+.BR create-environment.sh (1),
+.BR mu2edaq_shifter_tools_config (3)

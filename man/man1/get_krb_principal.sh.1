@@ -1,0 +1,70 @@
+.TH GET_KRB_PRINCIPAL.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.SH NAME
+get_krb_principal.sh \- export KRB5_PRINCIPAL from the active ticket cache
+.SH SYNOPSIS
+.B source get_krb_principal.sh
+[\fB\-q\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+.B get_krb_principal.sh
+finds the FNAL.GOV Kerberos principal in the credential cache the
+current shell logged in with, and exports it as
+\fBKRB5_PRINCIPAL\fR.
+.PP
+Only FNAL.GOV principals are considered, since that is the realm the
+Mu2e DAQ accounts live in. \fBklist \-l\fR is tried first; if that
+build of krb5 does not support cache collections, the default cache's
+principal is used instead, and is still required to be in FNAL.GOV.
+.PP
+.B This script should be sourced,
+so the export persists in the calling shell. Executed directly it
+prints the principal instead, which is useful in a pipeline.
+.PP
+.BR set_git_env.sh (1)
+consumes \fBKRB5_PRINCIPAL\fR to derive the git identity, so this
+script runs first in the login sequence.
+.SH OPTIONS
+.TP
+.BR \-q ", " \-\-quiet
+Do not warn when no principal can be found. The non-zero return status
+still reports it.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and return.
+.SH ENVIRONMENT
+.TP
+.B KRB5_PRINCIPAL
+Set by this script on success.
+.TP
+.B KRB5CCNAME
+Honoured indirectly through \fBklist\fR. The installed
+\fI~/.bashrc\fR rewrites it to a randomised path when the cache belongs
+to a shared group account, so shifters on one node do not share
+credentials.
+.SH EXIT STATUS
+Returns 0 when a principal was found and exported, 1 when \fBklist\fR
+is unavailable or no FNAL.GOV principal is in the cache, and 2 for an
+unrecognised option.
+.SH EXAMPLES
+Set the principal for this shell:
+.PP
+.RS
+.nf
+source get_krb_principal.sh
+echo "$KRB5_PRINCIPAL"
+.fi
+.RE
+.PP
+Read it without touching the environment:
+.PP
+.RS
+.nf
+principal=$(get_krb_principal.sh)
+.fi
+.RE
+.SH SEE ALSO
+.BR get_krb_daq_principal.sh (1),
+.BR set_git_env.sh (1),
+.BR setup-online.sh (1),
+.BR klist (1),
+.BR kinit (1)

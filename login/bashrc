@@ -10,17 +10,28 @@ if [ -f ~/.aliases ]; then
         . ~/.aliases
 fi
 #
-# Set up the default pager to be less, and set the number 
+# Set up the default pager to be less, and set the number
 # of processors available to the system.
 export PAGER=less
-export CETPKG_J=$((`cat /proc/cpuinfo |grep processor|tail -1|awk '{print $3}'` + 1 ))
+# Number of build jobs: one per core. /proc/cpuinfo only exists on
+# Linux, so fall back to getconf/sysctl elsewhere.
+if [ -r /proc/cpuinfo ]; then
+    export CETPKG_J=$(( $(grep -c '^processor' /proc/cpuinfo) ))
+elif command -v getconf >/dev/null 2>&1; then
+    # Assign first, then export: combining them would discard getconf's
+    # exit status and leave CETPKG_J empty on failure rather than 1.
+    CETPKG_J=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)
+    export CETPKG_J
+else
+    export CETPKG_J=1
+fi
 
 #############################
 # Define some useful functions
 
 # Reset the terminal and clear the scrollback buffer
-reset () 
-{ 
+reset ()
+{
     /usr/bin/reset;
     printf '\e[3J'
 }
@@ -28,7 +39,7 @@ reset ()
 # Fully reset the environment and start a new login shell
 envreset ()
 {
-    exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login 
+    exec env -i HOME=~ SHELL=$SHELL TERM=$TERM DISPLAY=$DISPLAY $SHELL --login
 }
 
 #############################################
@@ -41,10 +52,10 @@ envreset ()
 export PS1='[\[\e[34m\]\u@\h\[\e[0m\]: \[\e[32m\]\W\[\e[0m\]]: '
 
 ###############
-# This is a hack to avoid sharing kerberos tickets between users on the same 
-# machine.  If the klist cache is based only on group account of mu2e* --> 
-# UGROUP_ID is the suffix, and people inadvertently share kerberos 
-# certificates.  This code will destroy any existing kerberos tickets and 
+# This is a hack to avoid sharing kerberos tickets between users on the same
+# machine.  If the klist cache is based only on group account of mu2e* -->
+# UGROUP_ID is the suffix, and people inadvertently share kerberos
+# certificates.  This code will destroy any existing kerberos tickets and
 # create a new cache for the user.
 
 kinitCache=`klist 2>&1  | grep cache`
@@ -63,14 +74,14 @@ if [[ "x$kinitCache" == "xklist: No credentials cache found (filename: /tmp/krb5
     export KRB5CCNAME=/tmp/krb5cc_${UGROUP_ID}_${randomSequence}
     [[ $- == *i* ]] && echo ".bashrc: klist cache was associated with group account, changing for user - now ${KRB5CCNAME}; any kerberos tickets were destroyed"
 fi
-. "$HOME/.local/bin/env"
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
 #
 # This is a user specific bash function that is being defined
-# to setup Ed Callaghan's environment for mu2e work.  It is not sourced by 
+# to setup Ed Callaghan's environment for mu2e work.  It is not sourced by
 # default, but can be called by typing "ejc" at the command prompt.
 ejc(){
-    set -o vi	
+    set -o vi
     export PS1="${PS1} "
     bind -s '"\C-h": "~"'
     alias git='git -c user.name="edcallaghan" -c user.email="ejc3@lbl.gov"'
