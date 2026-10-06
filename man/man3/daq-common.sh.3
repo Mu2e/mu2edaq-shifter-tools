@@ -1,4 +1,4 @@
-.TH DAQ-COMMON.SH 3 "2026-09-10" "mu2edaq-shifter-tools" "Library Functions"
+.TH DAQ-COMMON.SH 3 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 daq-common.sh \- shared shell library for the Mu2e DAQ shifter tools
 .SH SYNOPSIS
@@ -155,7 +155,7 @@ A minimal command built on the library:
 #!/usr/bin/env bash
 set -u
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-. "$SCRIPT_DIR/daq-common.sh"
+\&. "$SCRIPT_DIR/daq-common.sh"
 
 DAQ_PROG="my-tool.sh"
 daq_load_dotenv
@@ -183,3 +183,8 @@ daq_read_config --config "$config_file" -z "$partition" active-envs
 .BR daq-read-config (1),
 .BR install-login.sh (1),
 .BR bootstrap.sh (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

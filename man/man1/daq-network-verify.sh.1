@@ -1,4 +1,4 @@
-.TH DAQ-NETWORK-VERIFY.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH DAQ-NETWORK-VERIFY.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 daq-network-verify.sh \- sweep the DAQ private networks and report live hosts
 .SH SYNOPSIS
@@ -13,7 +13,8 @@ daq-network-verify.sh \- sweep the DAQ private networks and report live hosts
 is a diagnostic for the DAQ private networks. It pings every address on
 each configured network with \fBnmap \-sn\fR so that the responding
 hosts appear in the local ARP table, dumps the ARP and routing tables,
-and then reports which hosts answered on each network.
+and then writes the hosts that answered on each network to
+\fIfiltered_arp_table.txt\fR.
 .PP
 Three networks are swept by default:
 .PP
@@ -102,8 +103,20 @@ Check one extra network:
 daq-network-verify.sh -N "mgmt=10.1.0.0/24"
 .fi
 .RE
+.SH CAVEATS
+The per-network report printed on the terminal contains only the
+section headers. The matching ARP lines are piped through
+\fBtee \-a filtered_arp_table.txt | grep \-q .\fR, which consumes them,
+so the host lines appear only in \fIfiltered_arp_table.txt\fR; the
+\fB(no hosts answered)\fR line is printed only when nothing matched.
+Read the file for the result.
 .SH SEE ALSO
 .BR daq-cluster-cp (1),
 .BR daq-status.sh (1),
 .BR nmap (1),
 .BR arp (8)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

@@ -1,0 +1,113 @@
+.TH DAQ-OPERATIONS.YAML 5 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
+.SH NAME
+daq-operations.yaml \- DAQ partitions, environments and ports for the shifter tools
+.SH SYNOPSIS
+.I config/daq\-operations.yaml
+.SH DESCRIPTION
+The operations file describes the DAQ partitions that
+.BR start-daq.sh (1),
+.BR stop-daq.sh (1),
+.BR daq-status.sh (1),
+.BR setup-online.sh (1),
+.BR create-environment.sh (1)
+and
+.BR send-run-control-command.sh (1)
+manage. No shell command parses it; each reads one value at a time
+through
+.BR daq-read-config (1).
+.PP
+The shipped \fIconfig/daq\-operations.yaml\fR is a tracked symbolic
+link to \fIdaq\-operations.example.yaml\fR, so a fresh checkout runs.
+.SS Top level
+.TP
+.B partitions
+Mapping of partition name to partition (required).
+.TP
+.B resource_manager_port
+Integer, default 1973. Returned by
+.BR "daq-read-config resource-manager-port" ;
+nothing in the package uses it.
+.SS Partition
+.TP
+.B environments
+Mapping of environment name to environment.
+.TP
+.B active_environments
+List (or single string) of the environments
+.BR start-daq.sh (1)
+starts and
+.BR stop-daq.sh (1)
+stops. When absent, every environment is active.
+.TP
+.B base_release
+Path of the base release, the spack upstream for
+.BR create-environment.sh (1).
+.TP
+.B ots_port_offset
+Integer, default 0.
+.SS Environment
+.TP
+.B test_rel_path
+Test release directory; \fBsetup-online.sh\fR changes into it.
+.TP
+.B setup_cmd
+Command sourced in that directory, arguments included, e.g.
+\fI<test_rel_path>/setup_ots.sh tracker\fR. The argument is passed to
+\fBsetup_ots.sh\fR as its subsystem name.
+.TP
+.B port_offset
+Integer, default 0. \fBots_port_offset\fR + \fBport_offset\fR is the
+\fBgateway\-port\fR verb.
+.SH FILES
+.TP
+.I config/daq\-operations.example.yaml
+Shipped example; also the marker used to find the installation root.
+.PP
+The file is looked up on the search path \fB$MU2EDAQ_CONFIG_DIR\fR,
+\fI./config\fR, \fI$MU2EDAQ_ROOT/config\fR, \fI~/.config/mu2edaq\fR,
+\fI/etc/mu2edaq\fR, unless \fB\-c\fR or \fBMU2EDAQ_CONFIG\fR names it.
+.SH ENVIRONMENT
+.TP
+.B MU2EDAQ_CONFIG
+Explicit path to the file.
+.TP
+.B MU2EDAQ_CONFIG_DIR
+First directory on the search path.
+.SH EXAMPLES
+The shipped example, abbreviated:
+.PP
+.RS
+.nf
+partitions:
+  partition_0:
+    environments:
+      tracker:
+        test_rel_path: "/home/mu2edaq/tracker/test_rel_v9_00_00"
+        setup_cmd: "/home/mu2edaq/tracker/test_rel_v9_00_00/setup_ots.sh tracker"
+        port_offset: 10
+    base_release: "/mu2e/releases/v9_00_00"
+    active_environments: ["tracker", "trigger"]
+    ots_port_offset: 10000
+resource_manager_port: 1973
+.fi
+.RE
+.SH CAVEATS
+The example's \fBcalorimeter\fR environment passes \fBcalorimeter\fR to
+\fBsetup_ots.sh\fR. Every \fBsetup_ots.sh\fR copy in otsdaq\-mu2e\-config
+and mu2edaq\-operations accepts only \fBcalo\fR and answers
+\fBInvalid parameter!\fR to anything else. The environment is commented
+out of \fBactive_environments\fR in the example.
+.PP
+The example's gateway ports (10010 tracker, 10020 trigger) are not the
+\fBOTS_MAIN_PORT\fR values those \fBsetup_ots.sh\fR copies assign (3065
+for both).
+.SH SEE ALSO
+.BR daq-read-config (1),
+.BR start-daq.sh (1),
+.BR setup-online.sh (1),
+.BR mu2edaq_shifter_tools_config (3),
+.BR tunnels.yaml (5)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page written for the September 2026 DAQ mega-review.

@@ -1,0 +1,91 @@
+.TH TUNNELS.YAML 5 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
+.SH NAME
+tunnels.yaml \- SSH tunnel definitions for daq-open-tunnels
+.SH SYNOPSIS
+.I config/tunnels.yaml
+.SH DESCRIPTION
+A list of tunnel entries, either bare or under a \fBtunnels:\fR key.
+JSON is accepted, so the historical \fItunnels.json\fR still loads.
+Read only by
+.BR daq-open-tunnels (1);
+.BR daq-tunnels.sh (1)
+has its own built-in service table and does not read this file.
+.PP
+Each entry opens
+.PP
+.RS
+.nf
+ssh \-N \-o ExitOnForwardFailure=yes [\-J jump] \e
+    \-L P:remote:P username@hostname
+.fi
+.RE
+.PP
+with \fIP\fR = \fIbase_port\fR + \fBport\fR. The local and remote port
+are the same number. \fIbase_port\fR is \fB\-\-base\-port\fR,
+\fBMU2EDAQ_TUNNEL_BASE_PORT\fR, or the caller's uid + 973.
+.SS Entry fields
+.TP
+.B hostname
+Host to ssh to (required). With no \fBjump\fR this host is the ssh
+target itself, not a jump host.
+.TP
+.B port
+Offset added to \fIbase_port\fR (required).
+.TP
+.B username
+SSH user; default \fB$USER\fR, overridden by \fB\-\-user\fR.
+.TP
+.B remote
+Host the far end connects to; default \fIlocalhost\fR.
+.TP
+.B jump
+ProxyJump host (optional).
+.TP
+.B label
+Name shown by \fBdaq\-open\-tunnels list\fR.
+.SS Shipped entries
+.nf
+label        ssh target                user     offset  jump
+daq-gateway  mu2edaq-gateway.fnal.gov  mu2edaq  3201    none
+gateway01    mu2egateway01.fnal.gov    mu2edaq  3203    none
+gateway02    mu2egateway02.fnal.gov    mu2edaq  3203    none
+.fi
+.PP
+\fBgateway01\fR and \fBgateway02\fR resolve to the same local port; only
+the first binds and \fBdaq\-open\-tunnels\fR warns. No entry names a
+service port such as 8443; every remote end is
+\fIlocalhost\fR:\fIbase_port\fR+offset on the gateway itself.
+.SH FILES
+.TP
+.I config/tunnels.example.yaml
+Shipped example; \fIconfig/tunnels.yaml\fR is a tracked symbolic link to
+it.
+.SH ENVIRONMENT
+.TP
+.B MU2EDAQ_TUNNELS
+Explicit path to the file.
+.TP
+.B MU2EDAQ_TUNNEL_BASE_PORT
+Base port.
+.SH EXAMPLES
+.RS
+.nf
+tunnels:
+  \- label: gateway01
+    hostname: mu2egateway01.fnal.gov
+    username: mu2edaq
+    port: 3203
+  \- label: dqm
+    hostname: mu2e\-dcs\-01.fnal.gov
+    jump: mu2egateway02.fnal.gov
+    port: 3205
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-open-tunnels (1),
+.BR daq-tunnels.sh (1),
+.BR daq-operations.yaml (5)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page written for the September 2026 DAQ mega-review.

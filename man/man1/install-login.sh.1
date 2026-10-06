@@ -1,4 +1,4 @@
-.TH INSTALL-LOGIN.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH INSTALL-LOGIN.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 install-login.sh \- install the shifter login environment and commands
 .SH SYNOPSIS
@@ -73,8 +73,31 @@ Renaming \fBget_krb_daq_principle.sh\fR to
 \fBget_krb_daq_principal.sh\fR means an account installed from an older
 checkout keeps a stale copy of the old name in \fI~/bin\fR. It is inert
 and can be deleted.
+.SH ENVIRONMENT
+.TP
+.B MU2EDAQ_INSTALL_HOME
+Default for \fB\-d\fR.
+.TP
+.B MU2EDAQ_INSTALL_BIN
+Default for \fB\-b\fR.
+.SH FILES
+Written, each after a backup of any existing copy:
+.PP
+.RS
+.nf
+~/.aliases ~/.bash_logout ~/.bash_profile ~/.bashrc   mode 644
+~/bin/<every file in scripts/>                        mode 755
+~/bin/start-daq.sh ~/bin/stop-daq.sh                  mode 755
+~/.mu2edaq/env                                        MU2EDAQ_ROOT=...
+.fi
+.RE
+.PP
+Nothing else is changed: no crontab entry, no symbolic link, no ssh
+configuration, no keytab.
 .SH EXIT STATUS
-Returns 0 on success or after a dry run, 1 if \fIlogin/\fR or
+Returns 0 after the install or a dry run \(em including when an
+individual \fBinstall\fR or \fBcp\fR fails, since the script does not
+check them \(em 1 if \fIlogin/\fR or
 \fIscripts/\fR is missing, and 2 for an unrecognised option.
 .SH EXAMPLES
 See exactly what would be installed:
@@ -100,9 +123,28 @@ Stage an install into a scratch directory:
 \&./install-login.sh -d /tmp/stage -b /tmp/stage/bin
 .fi
 .RE
+.SH CAVEATS
+Every run copies each existing target to \fI<file>.bak.<YYYYmmddHHMMSS>\fR
+with \fBcp \-p\fR before \fBinstall\fR replaces it, so repeated runs
+accumulate backups. Backups of the commands land in \fI~/bin\fR with
+their mode preserved, i.e. as executables on the \fBPATH\fR.
+.PP
+The installed \fI~/.bashrc\fR and \fI~/.bash_profile\fR replace any
+copied from the Mu2e \fBBootstrap\fR repository
+(\fIdotFiles/.bashrc\fR, \fIdotFiles/.bash_profile\fR); the two are
+different files and the last one installed wins.
+.PP
+The installed \fI~/.bashrc\fR detects a shared credential cache only
+for uid 51937 (\fBmu2eshift\fR), with a second test hard-coded to
+\fI/tmp/krb5cc_55438\fR.
 .SH SEE ALSO
 .BR bootstrap.sh (1),
 .BR get_krb_principal.sh (1),
 .BR get_krb_daq_principal.sh (1),
 .BR set_git_env.sh (1),
 .BR daq-common.sh (3)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

@@ -1,4 +1,4 @@
-.TH DAQ-CLUSTER-CP 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH DAQ-CLUSTER-CP 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 daq-cluster-cp \- copy files to many DAQ cluster nodes in parallel
 .SH SYNOPSIS
@@ -121,7 +121,23 @@ Push several files everywhere, eight at a time, reporting each:
 daq-cluster-cp -a -j 8 -v a.fcl b.fcl /home/mu2edaq/config/
 .fi
 .RE
+.SH CAVEATS
+The shipped \fIdata/daq_nodes.json\fR names hosts
+\fBmu2edaq01\fR..\fB13\fR, \fBmu2etrk01\fR..\fB09\fR,
+\fBmu2ecrv01\fR..\fB08\fR and \fBmu2ecalo01\fR..\fB08\fR. The MC\-2
+readout nodes are \fBmu2e\-trk\-NN\fR, \fBmu2e\-calo\-NN\fR and
+\fBmu2e\-crv\-NN\fR (mu2edaq\-operations \fInodes_config.yaml\fR: 18
+tracker, 14 calorimeter, 1 CRV). Looked up from the reviewer's
+workstation on 2026\-10\-06, 30 of the 38 inventory names did not
+resolve, and the two \fBmu2etrk01\fR/\fBmu2ecalo01\fR names that did
+resolve are on different subnets from \fBmu2e\-trk\-01\fR and
+\fBmu2e\-calo\-01\fR. Use \fB\-\-nodes\-file\fR with a current inventory.
 .SH SEE ALSO
 .BR daq-network-verify.sh (1),
 .BR daq-ls2json (1),
 .BR scp (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

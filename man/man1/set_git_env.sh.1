@@ -1,4 +1,4 @@
-.TH SET_GIT_ENV.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
+.TH SET_GIT_ENV.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 set_git_env.sh \- configure git and GitHub access from the Kerberos principal
 .SH SYNOPSIS
@@ -14,8 +14,10 @@ from \fBKRB5_PRINCIPAL\fR, which
 .BR get_krb_principal.sh (1)
 exports. It:
 .IP \(bu 4
-sets git \fBuser.email\fR to the full principal and \fBuser.name\fR to
-the part before the \fB@\fR;
+runs \fBgit config \-\-global\fR (or \fB\-\-local\fR with \fB\-l\fR) to
+set \fBuser.email\fR to the full principal and \fBuser.name\fR to
+the part before the \fB@\fR; \fB\-\-global\fR writes the account's
+\fI~/.gitconfig\fR;
 .IP \(bu 4
 exports \fBGIT_SSH_COMMAND\fR pointing at the per-user key
 \fI~/.ssh/id_<user>_rsa\fR;
@@ -66,8 +68,9 @@ Exported by this script.
 .B SSH_AUTH_SOCK
 Consulted to decide whether an agent is available.
 .SH EXIT STATUS
-Returns 0 on success, 1 when \fBKRB5_PRINCIPAL\fR is unset, and 2 for
-an unrecognised option.
+Returns 1 when \fBKRB5_PRINCIPAL\fR is unset and 2 for an
+unrecognised option; otherwise 0, including when \fBgit config\fR
+fails or the key is missing (those are reported as \fBFail\fR only).
 .SH EXAMPLES
 Configure this shell for GitHub access:
 .PP
@@ -85,9 +88,30 @@ Apply the identity only to the current clone:
 source set_git_env.sh --local
 .fi
 .RE
+.SH CAVEATS
+On a shared group account the identity is written to the one
+\fI~/.gitconfig\fR that every session of that account reads. Two
+operators logged in to the same account at once share whichever
+identity was written last, so the attribution guarantee holds only for
+one concurrent login per account. \fBGIT_AUTHOR_*\fR and
+\fBGIT_COMMITTER_*\fR environment variables, which are per-shell, are
+not set.
+.PP
+mu2edaq\-operations takes the opposite approach: its
+\fBops_setup_ots.sh\fR exports \fBGIT_AUTHOR_*\fR and explicitly avoids
+\fBgit config \-\-global\fR, and its \fBcheck_keys.sh\fR periodically runs
+\fBgit config \-\-unset user.name\fR/\fBuser.email\fR on every
+\fI/home/mu2e*/.gitconfig\fR (Mu2e/daq\-operations#47). Where both are
+deployed, each login writes the identity and the next \fBcheck_keys.sh\fR
+run removes it.
 .SH SEE ALSO
 .BR get_krb_principal.sh (1),
 .BR get_krb_daq_principal.sh (1),
 .BR setup-online.sh (1),
 .BR git-config (1),
 .BR ssh-add (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

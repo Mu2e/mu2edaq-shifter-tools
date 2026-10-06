@@ -1,4 +1,4 @@
-.TH START-DAQ.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH START-DAQ.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 start-daq.sh \- start the Mu2e DAQ for one partition in tmux
 .SH SYNOPSIS
@@ -120,6 +120,14 @@ See what would happen without touching tmux:
 start-daq.sh -n -z partition_0
 .fi
 .RE
+.SH CAVEATS
+Environments selected with \fB\-e\fR that are not in the partition's
+\fBactive_environments\fR are not sent \fBots \-k\fR by
+.BR stop-daq.sh (1);
+see that page.
+.PP
+The automatic bootstrap runs \fBpip install\fR from the package
+index, including PyQt5, on whatever host \fBstart\-daq.sh\fR is run.
 .SH SEE ALSO
 .BR stop-daq.sh (1),
 .BR daq-status.sh (1),
@@ -128,3 +136,8 @@ start-daq.sh -n -z partition_0
 .BR daq-read-config (1),
 .BR bootstrap.sh (1),
 .BR tmux (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

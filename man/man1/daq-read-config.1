@@ -1,4 +1,4 @@
-.TH DAQ-READ-CONFIG 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH DAQ-READ-CONFIG 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 daq-read-config \- query the DAQ operations configuration
 .SH SYNOPSIS
@@ -93,11 +93,15 @@ The environment's \fBport_offset\fR.
 The partition's \fBots_port_offset\fR.
 .TP
 .B gateway-port
-\fBots_port_offset\fR + \fBport_offset\fR, which is how ots derives the
-environment's gateway port.
+\fBots_port_offset\fR + \fBport_offset\fR, assumed to be the
+environment's gateway port. Read only by
+.BR send-run-control-command.sh (1).
 .TP
 .B resource-manager-port
-The ResourceManager port. Defaults to 1973, Mu2e being E-973.
+The \fBresource_manager_port\fR key; 1973 if unset, Mu2e being E-973.
+No command in this package reads the value or connects to it, and
+nothing listens on 1973: the mu2edaq\-resource\-manager service binds
+8080.
 .SH CONFIGURATION SEARCH PATH
 Searched in order, first match wins:
 .PP
@@ -158,3 +162,8 @@ daq-read-config --json print | jq .
 .BR setup-online.sh (1),
 .BR create-environment.sh (1),
 .BR mu2edaq_shifter_tools_config (3)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

@@ -1,0 +1,45 @@
+.TH CURRENT_RELEASE.YAML 5 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
+.SH NAME
+current_release.yaml \- DAQ release description for daq-install-tools
+.SH SYNOPSIS
+.I config/current_release.yaml
+.SH DESCRIPTION
+Read by
+.BR daq-install-tools (1),
+which renders the two version strings, checks that the release paths
+exist, and reports or creates the install directories. The file is
+gitignored; copy \fIcurrent_release.example.yaml\fR to create it.
+.SS Keys
+.TP
+.BR base_release ", " test_release
+Mappings with \fBprefix\fR (string, default \fBd\fR), \fBmajor\fR,
+\fBminor\fR, \fBpatch\fR (integers, zero-padded to two digits),
+\fBsuffix\fR (optional) and \fBpath\fR. Rendered as
+\fI<prefix><major>_<minor>_<patch>[_<suffix>]\fR, e.g.
+\fBd09_00_00_alpha\fR. A missing or non-existent \fBpath\fR is an error
+unless \fB\-\-override\fR is given.
+.TP
+.B install_path
+Mapping with a required \fBbasepath\fR; every other key is a directory
+joined onto it (e.g. \fBbin: bin\fR means \fI<basepath>/bin\fR).
+.SH FILES
+.TP
+.I config/current_release.example.yaml
+Shipped example.
+.SH EXAMPLES
+.RS
+.nf
+base_release: {prefix: d, major: 9, minor: 0, patch: 0,
+               path: /mu2e/releases/v9_00_00}
+test_release: {prefix: d, major: 9, minor: 0, patch: 0,
+               suffix: alpha, path: /home/mu2edaq/test_rel_v9_00_00}
+install_path: {basepath: /home/mu2edaq/daq\-tools, bin: bin, man: man}
+.fi
+.RE
+.SH SEE ALSO
+.BR daq-install-tools (1),
+.BR daq-operations.yaml (5)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page written for the September 2026 DAQ mega-review.

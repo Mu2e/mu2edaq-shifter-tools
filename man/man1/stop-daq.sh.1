@@ -1,4 +1,4 @@
-.TH STOP-DAQ.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
+.TH STOP-DAQ.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 stop-daq.sh \- stop the Mu2e DAQ for one or all partitions
 .SH SYNOPSIS
@@ -20,8 +20,9 @@ created, waiting for \fBots\fR to exit, and then killing the session.
 .PP
 Windows are located by name
 (\fBdaq\-\fIpartition\fB\-\fIenvironment\fR) rather than by index, so
-a partition started with a different environment ordering, or with
-windows added by hand, still stops correctly. A window named in the
+a partition started with a different environment ordering still
+stops correctly. \fBots \-k\fR is sent only to the windows of the
+partition's \fBactive_environments\fR; a window named in the
 configuration but absent from the session is reported and skipped.
 .PP
 After the transition requests are sent, the session is polled until no
@@ -106,8 +107,23 @@ Allow two minutes for a clean shutdown:
 stop-daq.sh -z partition_0 -t 120
 .fi
 .RE
+.SH CAVEATS
+An environment started with \fBstart\-daq.sh \-e\fR that is not in
+\fBactive_environments\fR, or a window added by hand, never receives
+\fBots \-k\fR. Its pane keeps running \fBots\fR, so the wait runs to
+the full timeout and the session is then killed, which delivers
+\fBSIGHUP\fR instead of an orderly \fBots \-k\fR.
+.PP
+Without \fB\-y\fR and with no terminal on standard input, the prompt
+reads end-of-file, the answer is taken as no, and the command prints
+\fBAborted.\fR and exits 0.
 .SH SEE ALSO
 .BR start-daq.sh (1),
 .BR daq-status.sh (1),
 .BR daq-read-config (1),
 .BR tmux (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

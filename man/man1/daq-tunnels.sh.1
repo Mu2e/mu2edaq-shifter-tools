@@ -1,4 +1,4 @@
-.TH DAQ-TUNNELS.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH DAQ-TUNNELS.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 daq-tunnels.sh \- manage the SSH port forwards for the Mu2e shifter GUIs
 .SH SYNOPSIS
@@ -47,10 +47,26 @@ The defaults are:
 .PP
 .RS
 .nf
-shift=3075  crv=3085  calo=3025  trig=3045  dqm=5029
-dqmvis=5033 crvdqm=8877! (mu2e-dl-01)     cfo=3095
-stm=30351   trk=3065    grafana=3000!     (mu2e-dcs-01)
+group  label   local  remote end
+daq    shift   3075   mu2e-cfo-01:3075
+daq    crv     3085   mu2e-cfo-01:3085
+daq    calo    3025   mu2e-cfo-01:3025
+daq    trig    3045   mu2e-cfo-01:3045
+daq    dqm     5029   mu2e-cfo-01:5029
+daq    dqmvis  5033   mu2e-dl-01-data:5033
+daq    crvdqm  8877!  mu2e-dl-01:8877
+daq    cfo     3095   mu2e-cfo-01:3095
+daq    stm     30351  mu2e-cfo-01:30351
+daq    trk     3065   mu2e-cfo-01:3065
+extra  grafana 3000!  mu2e-dcs-01:3000
 .fi
+.PP
+The local and remote port of each forward are the same number
+(\fB\-L\fR \fIp\fB:\fIhost\fB:\fIp\fR). Both groups ssh to
+\fB\-\-host\fR (default \fImu2e\-dcs\-01\fR) through
+\fB\-\-proxy\-jump\fR (default \fImu2egateway02\fR); the remote
+ends are resolved from \fImu2e\-dcs\-01\fR. No forward targets port
+8443 on either gateway.
 .RE
 .SH OPTIONS
 Configuration precedence is command line, then environment variable,
@@ -94,6 +110,9 @@ Print the ssh command lines and change nothing.
 .TP
 .BR \-h ", " \-\-help
 Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
 .SH ENVIRONMENT
 .TP
 .B MU2EDAQ_TUNNEL_SERVICES
@@ -147,8 +166,26 @@ Close them without being asked:
 daq-tunnels.sh -y stop
 .fi
 .RE
+.SH CAVEATS
+\fBrestart\fR never restarts anything. It re-invokes the script with
+\fB${dry_run:+\-n} ${assume_yes:+\-y}\fR, and because both variables
+always hold 0 or 1 (never empty), \fB\-n\fR and \fB\-y\fR are always
+passed: both halves run as dry runs, print
+\fBDry run: no tunnels were opened.\fR and exit 0. Use \fBstop\fR
+followed by \fBstart\fR.
+.PP
+The service ports are not derived from any otsdaq configuration.
+\fBtrig=3045\fR and \fBstm=30351\fR differ from the
+\fBOTS_MAIN_PORT\fR values in every \fBsetup_ots.sh\fR copy
+(trigger 3065 with \fB#3045\fR commented out; stm 3035). Which ports
+the supervisors on \fImu2e\-cfo\-01\fR actually bind was not verified.
 .SH SEE ALSO
 .BR daq-open-tunnels (1),
 .BR start-novnc-connection.sh (1),
 .BR ssh (1),
 .BR kinit (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

@@ -1,4 +1,4 @@
-.TH CREATE-ENVIRONMENT.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH CREATE-ENVIRONMENT.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 create-environment.sh \- create or update a DAQ spack test release
 .SH SYNOPSIS
@@ -68,12 +68,14 @@ one.
 .SH EXIT STATUS
 .TP
 .B 0
-The release was created or updated, or the dry run completed.
+The commands were run, or the dry run completed. The status of
+\fBcurl\fR, \fBchmod\fR and the quick-start helper is \fBnot\fR
+checked: a failed download or a failed spack build also exits 0.
 .TP
 .B 1
 The configuration could not be read, no \fBtest_rel_path\fR or
 \fBbase_release\fR is configured, the directory is missing under
-\fB\-\-update\-only\fR, or the download or spack helper failed.
+\fB\-\-update\-only\fR, or the existing directory has no helper.
 .TP
 .B 2
 An environment was not given, or an option was not recognised.
@@ -101,8 +103,20 @@ Build against a branch of otsdaq-mu2e:
 create-environment.sh -z partition_0 -e tracker -b my-feature-branch
 .fi
 .RE
+.SH CAVEATS
+Verified 2026-10-06: with a helper that exits 7, the script prints the
+helper's output and exits 0. Check the output, not the status.
+.PP
+The helper is fetched unpinned from the \fBdevelop\fR branch of
+\fBMu2e/otsdaq\-mu2e\fR (\fItools/mu2e\-quick\-spack\-start.sh\fR)
+and executed; pass \fB\-b\fR with a tag to make a build reproducible.
 .SH SEE ALSO
 .BR setup-online.sh (1),
 .BR start-daq.sh (1),
 .BR daq-read-config (1),
 .BR daq-install-tools (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

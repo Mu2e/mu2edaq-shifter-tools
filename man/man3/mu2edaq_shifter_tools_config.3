@@ -1,4 +1,4 @@
-.TH MU2EDAQ_SHIFTER_TOOLS_CONFIG 3 "2026-09-10" "mu2edaq-shifter-tools" "Library Functions"
+.TH MU2EDAQ_SHIFTER_TOOLS_CONFIG 3 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 mu2edaq_shifter_tools.config \- configuration discovery, loading and precedence
 .SH SYNOPSIS
@@ -146,11 +146,13 @@ The partition-wide ots port offset; 0 if unset.
 The environment's offset within its partition; 0 if unset.
 .TP
 .BI gateway_port( "partition, environment" )
-\fBots_port_offset\fR + \fBport_offset\fR, which is how ots derives the
-port.
+\fBots_port_offset\fR + \fBport_offset\fR, assumed to be the ots
+gateway port (not verified against otsdaq).
 .TP
 .BI resource_manager_port()
-The ResourceManager port; 1973 if unset, Mu2e being E-973.
+The \fBresource_manager_port\fR key; 1973 if unset, Mu2e being E-973.
+Nothing in this package connects to it, and the
+mu2edaq\-resource\-manager service binds 8080.
 .SH EXCEPTIONS
 .TP
 .B ConfigError
@@ -203,3 +205,8 @@ except cfg.ConfigError as exc:
 .BR mu2edaq_shifter_tools (3),
 .BR daq-common.sh (3),
 .BR daq-read-config (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.

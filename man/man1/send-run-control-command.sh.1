@@ -1,4 +1,4 @@
-.TH SEND-RUN-CONTROL-COMMAND.SH 1 "2026-09-10" "mu2edaq-shifter-tools" "User Commands"
+.TH SEND-RUN-CONTROL-COMMAND.SH 1 "2026-10-06" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
 .SH NAME
 send-run-control-command.sh \- send a run-control state transition (not implemented)
 .SH SYNOPSIS
@@ -53,15 +53,20 @@ Gateway host to address. Environment: \fBMU2EDAQ_RC_HOST\fR. Default:
 .BR \-n ", " \-\-dry\-run
 Print the resolved target and exit 0 without attempting to send.
 .TP
-.BR \-h ", " \-\-help
+.BR \-h ", " \-\-help ", " \-?
 Show a usage summary and exit.
+.TP
+.B \-\-debug
+Trace execution with \fBset \-x\fR.
 .SH COMMANDS
 .B init configure start stop pause resume halt
 .PP
 Any other verb is rejected before the target is resolved.
 .SH TARGET PORT
 The port is the partition's \fBots_port_offset\fR plus the
-environment's \fBport_offset\fR, which is how ots itself derives it.
+environment's \fBport_offset\fR. The script assumes this is how ots
+derives its gateway port; that assumption has not been verified
+against otsdaq (see CAVEATS).
 The same number is available as
 .PP
 .RS
@@ -79,8 +84,8 @@ Extra options, prepended to the command line.
 A dry run completed.
 .TP
 .B 1
-The configuration could not be read, or the port could not be
-computed.
+The command verb is not one of the seven listed, the configuration
+could not be read, or the port could not be computed.
 .TP
 .B 2
 No environment or command was given, or an option was not recognised.
@@ -96,7 +101,38 @@ Check which host and port a transition would target:
 send-run-control-command.sh -z partition_0 -e tracker -n start
 .fi
 .RE
+.SH CAVEATS
+Observed behaviour (2026-10-06, shipped configuration):
+.PP
+.RS
+.nf
+$ send-run-control-command.sh -e tracker start; echo rc=$?
+Target: localhost:10010  (partition_0/tracker)          [stdout]
+Command: start                                          [stdout]
+send-run-control-command.sh: sending run-control commands is
+  not implemented yet                                   [stderr]
+send-run-control-command.sh: use the otsdaq web GUI on
+  localhost:10010 instead                               [stderr]
+rc=3
+.fi
+.RE
+.PP
+The refusal is explicit, but the two informational lines go to
+standard output and the refusal to standard error, so a caller that
+captures only standard output and ignores the status sees what looks
+like a resolved target.
+.PP
+With the shipped \fIdaq\-operations.yaml\fR the computed ports are
+10010 (tracker) and 10020 (trigger). Every \fBsetup_ots.sh\fR copy in
+otsdaq\-mu2e\-config and mu2edaq\-operations assigns the tracker and
+trigger supervisors \fBOTS_MAIN_PORT=3065\fR, so the GUI port this
+command suggests is not the one those scripts configure.
 .SH SEE ALSO
 .BR daq-tunnels.sh (1),
 .BR daq-read-config (1),
 .BR daq-status.sh (1)
+.SH AUTHOR
+Andrew Norman, Eric Flumerfelt and the Mu2e DAQ group
+(\fIhttps://github.com/Mu2e/mu2edaq\-shifter\-tools\fR).
+Page reviewed against the source for the September 2026 DAQ
+mega-review.
