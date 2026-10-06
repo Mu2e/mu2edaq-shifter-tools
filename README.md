@@ -204,9 +204,12 @@ build.
   handling and port resolution are complete and tested, but the otsdaq
   gateway UDP payload format has not been transcribed, so it exits 3.
   Drive state transitions from the otsdaq web GUI instead.
-- **ResourceManager does not exist.** Nothing currently prevents two
-  partitions from claiming the same DTC. The design sketch is recorded
-  in
+- **No resource arbitration.** Nothing currently prevents two
+  partitions from claiming the same DTC. A resource manager exists in
+  the superproject (`Mu2e/mu2edaq-resource-manager`, an advisory HTTP
+  service on port 8080), but nothing here or in otsdaq calls it, and the
+  `resource_manager_port: 1973` in `config/daq-operations.yaml` is read
+  by no command. The original design sketch is recorded in
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#resourcemanager-design-sketch).
 - **The shipped `tunnels.example.yaml` has a port collision**
   (`gateway01` and `gateway02` both use offset 3203), reproduced from
