@@ -15,6 +15,13 @@
 # noVNC's "password" and "autoconnect=true" query parameters so the
 # session connects automatically instead of prompting for a password.
 #
+# Each card shows the login account, the host it connects to and a
+# description, taken from novnc-sessions.yaml (see novnc-sessions.yaml(5)).
+# The order of that file is the order of the cards; sessions the portal
+# lists but the file does not follow, in the portal's order. Reading the
+# file needs PyYAML; without it, or without the file, the cards are shown
+# in portal order with no descriptions.
+#
 # Configuration precedence: command line > environment > .env > default.
 #
 #   -H, --host HOST         remote host        (env NOVNC_HOST,
@@ -32,6 +39,9 @@
 #   -P, --password-file FILE file holding the  (env NOVNC_PASSWORD_FILE,
 #                            VNC password        default ~/.novnc_password)
 #                            (first line used)
+#   -c, --sessions FILE     session descriptions (env NOVNC_SESSIONS_FILE,
+#                            and card order         default novnc-sessions.yaml
+#                                                   on the config search path)
 #   -n, --dry-run           print what would happen, do nothing
 #   -h, --help              show this help and exit
 #
@@ -61,10 +71,11 @@ proxy_jump_set=0
 local_port="${NOVNC_LOCAL_PORT:-}"
 remote_port="${NOVNC_REMOTE_PORT:-443}"
 password_file="${NOVNC_PASSWORD_FILE:-$HOME/.novnc_password}"
+sessions_file="${NOVNC_SESSIONS_FILE:-}"
 dry_run=0
 
 USAGE="\
-usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-n]
+usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-c sessions_file] [-n]
 
 Open an SSH tunnel to port $remote_port on the remote host and launch a
 browser pointed at the local end of the tunnel.
@@ -79,6 +90,9 @@ browser pointed at the local end of the tunnel.
   -P, --password-file FILE file whose first line is the VNC password, used to
                            build auto-connecting session links
                            (default ~/.novnc_password; ignored if absent)
+  -c, --sessions FILE      YAML file of session descriptions and card order
+                           (default novnc-sessions.yaml on the config search
+                           path; ignored if absent; needs PyYAML)
   -n, --dry-run            show what would be done, change nothing
   -h, --help               show this help and exit
 "
@@ -91,6 +105,7 @@ while [ -n "${1:-}" ]; do
         -p|--port)          shift; local_port="${1:-}";;
         -r|--remote-port)   shift; remote_port="${1:-}";;
         -P|--password-file) shift; password_file="${1:-}";;
+        -c|--sessions)      shift; sessions_file="${1:-}";;
         -n|--dry-run)       dry_run=1;;
         -h|--help)          echo "$USAGE"; exit 0;;
         *) echo "Unknown option: $1" >&2; echo "$USAGE" >&2; exit 1;;
@@ -107,6 +122,18 @@ fi
 
 jump_opts=()
 [ -n "$proxy_jump" ] && jump_opts=(-J "$proxy_jump")
+
+# Session descriptions and card order. An explicit file must exist; the
+# default is optional, looked for on the toolkit's config search path
+# when daq-common.sh is available, else beside this script's checkout.
+if [ -n "$sessions_file" ]; then
+    case "$sessions_file" in "~/"*) sessions_file="$HOME/${sessions_file#'~/'}";; esac
+    [ -f "$sessions_file" ] || { echo "ERROR: sessions file not found: $sessions_file" >&2; exit 1; }
+elif command -v daq_config_file >/dev/null 2>&1; then
+    sessions_file=$(daq_config_file novnc-sessions.yaml 2>/dev/null) || sessions_file=""
+elif [ -f "$SCRIPT_DIR/../config/novnc-sessions.yaml" ]; then
+    sessions_file="$SCRIPT_DIR/../config/novnc-sessions.yaml"
+fi
 
 # Find a free TCP port on the loopback interface.
 find_free_port() {
@@ -149,16 +176,22 @@ open_browser() {
 # self-contained dashboard HTML file at $2, one card per session link.
 # If a password is given as $3, each link is built with noVNC's
 # password/autoconnect query parameters so it connects automatically.
+# $4 is the sessions file (descriptions and card order; may be empty)
+# and $5 the host the tunnel reaches, shown on every card unless the
+# sessions file names another.
 # Requires python3; returns non-zero if unavailable or the fetch/parse
 # fails, in which case the caller should fall back to the raw page.
+# Problems with the sessions file are warnings, never failures.
 render_dashboard() {
     local base_url="$1"
     local out_file="$2"
     local password="${3:-}"
+    local sessions="${4:-}"
+    local default_host="${5:-}"
 
     command -v python3 >/dev/null 2>&1 || return 1
 
-    python3 - "$base_url" "$out_file" "$password" <<'PY'
+    python3 - "$base_url" "$out_file" "$password" "$sessions" "$default_host" <<'PY'
 import html
 import ssl
 import sys
@@ -166,8 +199,11 @@ import urllib.request
 from html.parser import HTMLParser
 from urllib.parse import urljoin, quote
 
-base_url, out_file = sys.argv[1], sys.argv[2]
-password = sys.argv[3] if len(sys.argv) > 3 else ""
+base_url, out_file, password, sessions_file, default_host = (sys.argv[1:6] + [""] * 5)[:5]
+
+
+def warn(message):
+    sys.stderr.write("WARNING: " + message + "\n")
 
 
 class LinkExtractor(HTMLParser):
@@ -196,6 +232,39 @@ class LinkExtractor(HTMLParser):
             self._in_a = False
 
 
+def load_sessions(path):
+    """Return the sessions file as an ordered list of dicts keyed by
+    account. Any problem is a warning and yields an empty list, so the
+    dashboard still renders."""
+    if not path:
+        return []
+    try:
+        import yaml
+    except ImportError:
+        warn(
+            "PyYAML is not installed, so %s is ignored and the cards have no "
+            "descriptions. Install it with: python3 -m pip install --user pyyaml" % path
+        )
+        return []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+    except Exception as exc:
+        warn("cannot read %s: %s" % (path, exc))
+        return []
+    entries = data.get("sessions") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        warn("%s has no 'sessions:' list; ignoring it" % path)
+        return []
+    sessions = []
+    for i, entry in enumerate(entries):
+        if not isinstance(entry, dict) or not entry.get("account"):
+            warn("%s: sessions[%d] has no 'account'; skipping it" % (path, i))
+            continue
+        sessions.append(entry)
+    return sessions
+
+
 ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
@@ -214,17 +283,45 @@ if not parser.links:
     sys.stderr.write("render_dashboard: no session links found\n")
     sys.exit(1)
 
+# Order: the sessions file first, then whatever else the portal lists,
+# in the portal's order. File entries the portal does not list are
+# reported, not drawn, since there is no link for them.
+sessions = load_sessions(sessions_file)
+portal = dict(parser.links)
+ordered = []
+for entry in sessions:
+    account = str(entry["account"])
+    if account in portal:
+        ordered.append((account, portal.pop(account), entry))
+    else:
+        warn("%s lists '%s', which the portal does not offer" % (sessions_file, account))
+for account, href in parser.links:
+    if account in portal:
+        ordered.append((account, href, {}))
+
 cards = []
-for name, href in parser.links:
+for name, href, entry in ordered:
     link = urljoin(base_url, href)
     if password:
         sep = "&" if "?" in link else "?"
         link = f"{link}{sep}password={quote(password, safe='')}&autoconnect=true"
+    host = str(entry.get("host") or default_host)
+    display = entry.get("display")
+    where = host + (":%s" % display if display not in (None, "") else "")
+    description = str(entry.get("description") or "").strip()
     cards.append(
         '<a class="card" href="{url}" target="_blank" rel="noopener">'
         '<div class="card-icon">&#128421;&#65039;</div>'
         '<div class="card-name">{name}</div>'
-        "</a>".format(url=html.escape(link), name=html.escape(name))
+        '<div class="card-host">{where}</div>'
+        '<div class="card-desc{empty}">{desc}</div>'
+        "</a>".format(
+            url=html.escape(link),
+            name=html.escape(name),
+            where=html.escape(where),
+            empty="" if description else " card-desc-none",
+            desc=html.escape(description) if description else "no description configured",
+        )
     )
 
 page = """<!DOCTYPE html>
@@ -256,17 +353,16 @@ page = """<!DOCTYPE html>
   .subtitle {{ text-align: center; color: var(--muted); margin-bottom: 2.5rem; font-size: 0.9rem; }}
   .grid {{
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 1rem;
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
   }}
   .card {{
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     padding: 1.5rem 1rem;
     background: var(--card-bg);
     border-radius: 12px;
@@ -277,7 +373,10 @@ page = """<!DOCTYPE html>
   }}
   .card:hover {{ background: var(--card-hover); border-color: var(--accent); transform: translateY(-2px); }}
   .card-icon {{ font-size: 2rem; }}
-  .card-name {{ font-weight: 500; word-break: break-word; text-align: center; }}
+  .card-name {{ font-weight: 600; word-break: break-word; text-align: center; }}
+  .card-host {{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; color: var(--accent); word-break: break-all; text-align: center; }}
+  .card-desc {{ font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.35; }}
+  .card-desc-none {{ font-style: italic; opacity: 0.7; }}
   footer {{ text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 3rem; }}
 </style>
 </head>
@@ -287,10 +386,14 @@ page = """<!DOCTYPE html>
   <div class="grid">
     {cards}
   </div>
-  <footer>Generated by start-novnc-connection.sh</footer>
+  <footer>Generated by start-novnc-connection.sh{source}</footer>
 </body>
 </html>
-""".format(base_url=html.escape(base_url), cards="\n    ".join(cards))
+""".format(
+    base_url=html.escape(base_url),
+    cards="\n    ".join(cards),
+    source=(" from " + html.escape(sessions_file)) if sessions else "",
+)
 
 with open(out_file, "w", encoding="utf-8") as fh:
     fh.write(page)
@@ -306,6 +409,7 @@ url="https://localhost:$local_port"
 if [ "$dry_run" -eq 1 ]; then
     echo "ssh -N -o ExitOnForwardFailure=yes${jump_opts[*]:+ ${jump_opts[*]}} -L $local_port:localhost:$remote_port $user@$host"
     echo "browser -> $url"
+    echo "sessions -> ${sessions_file:-none (portal order, no descriptions)}"
     exit 0
 fi
 
@@ -361,7 +465,7 @@ if [ -n "$dashboard_dir" ]; then
     dashboard_file="$dashboard_dir/dashboard.html"
     built=0
     for _ in $(seq 1 15); do
-        if render_dashboard "$url" "$dashboard_file" "$password" 2>/dev/null; then
+        if render_dashboard "$url" "$dashboard_file" "$password" "$sessions_file" "$host" 2>"$dashboard_dir/render.err"; then
             built=1
             break
         fi
@@ -369,8 +473,12 @@ if [ -n "$dashboard_dir" ]; then
     done
     if [ "$built" -eq 1 ]; then
         open_url="file://$dashboard_file"
+        # Pass on the renderer's warnings (missing PyYAML, a bad sessions
+        # file) once, rather than from every retry.
+        grep '^WARNING' "$dashboard_dir/render.err" >&2
     else
         echo "WARNING: could not build the session dashboard; opening the raw session list instead." >&2
+        sed 's/^/  /' "$dashboard_dir/render.err" >&2
         rm -rf "$dashboard_dir"
         dashboard_dir=""
     fi

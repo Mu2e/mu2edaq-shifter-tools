@@ -189,12 +189,16 @@ endif()
 
 file(GLOB MU2EDAQ_MAN1 "${CMAKE_CURRENT_SOURCE_DIR}/man/man1/*.1")
 file(GLOB MU2EDAQ_MAN3 "${CMAKE_CURRENT_SOURCE_DIR}/man/man3/*.3")
+file(GLOB MU2EDAQ_MAN5 "${CMAKE_CURRENT_SOURCE_DIR}/man/man5/*.5")
 
 install(FILES ${MU2EDAQ_MAN1}
         DESTINATION "${CMAKE_INSTALL_MANDIR}/man1"
         COMPONENT man)
 install(FILES ${MU2EDAQ_MAN3}
         DESTINATION "${CMAKE_INSTALL_MANDIR}/man3"
+        COMPONENT man)
+install(FILES ${MU2EDAQ_MAN5}
+        DESTINATION "${CMAKE_INSTALL_MANDIR}/man5"
         COMPONENT man)
 
 # --------------------------------------------------------------------------
@@ -206,7 +210,11 @@ install(FILES ${MU2EDAQ_MAN3}
 install(DIRECTORY config/
         DESTINATION "${MU2EDAQ_SHAREDIR}/config"
         COMPONENT config
-        FILES_MATCHING PATTERN "*.example*")
+        FILES_MATCHING PATTERN "*.example*"
+                       # Read in place by the client-side commands, so they
+                       # ship as-is rather than as examples.
+                       PATTERN "ssh-config-mu2e.in"
+                       PATTERN "novnc-sessions.yaml")
 
 install(DIRECTORY data/
         DESTINATION "${MU2EDAQ_SHAREDIR}/data"

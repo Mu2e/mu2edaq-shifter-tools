@@ -1,0 +1,90 @@
+.TH NOVNC-SESSIONS.YAML 5 "2026-10-28" "mu2edaq-shifter-tools" "File Formats"
+.SH NAME
+novnc-sessions.yaml \- descriptions and card order for the noVNC session dashboard
+.SH SYNOPSIS
+.I config/novnc-sessions.yaml
+.br
+.I ~/.config/mu2edaq/novnc-sessions.yaml
+.SH DESCRIPTION
+\fBClient side.\fR
+.BR start-novnc-connection.sh (1)
+reads this file on your laptop when it builds the session dashboard. It
+gives each VNC session a description and puts the cards in order.
+.PP
+The file is a YAML mapping with one key, \fBsessions\fR, whose value is
+a list. \fBThe order of the list is the order of the cards.\fR A
+session the noVNC portal offers but the list does not name is shown
+after the listed ones, in the portal's order, with "no description
+configured". An entry naming an account the portal does not offer is
+reported on standard error and skipped, because there is no link to
+draw.
+.PP
+Each list entry is a mapping with these keys:
+.TP
+.B account
+Login account, exactly as the portal's session list names it, for
+example \fBmu2eshift\fR. Required; an entry without it is skipped with a
+warning.
+.TP
+.B description
+What the desktop is for, in a sentence or two. Shown under the host.
+HTML in it is escaped, not rendered.
+.TP
+.B display
+X display number of the session on its host. When given, the card
+shows \fIhost\fB:\fIdisplay\fR. Display numbers are not account
+numbers; on mu2e-mgr-01, \fBmu2ecr0\fIN\fR is display \fIN\fR+3.
+.TP
+.B host
+Host running the session. Default: the host the tunnel goes to
+(\fBNOVNC_HOST\fR, normally \fImu2e\-mgr\-01.fnal.gov\fR).
+.PP
+Other keys are ignored.
+.SH REQUIREMENTS
+The file is read with PyYAML (\fByaml.safe_load\fR) in the
+\fBpython3\fR on your \fBPATH\fR. Without PyYAML the dashboard still
+renders, in portal order and with no descriptions, and one warning
+says how to install it:
+.PP
+.RS
+.nf
+python3 \-m pip install \-\-user pyyaml
+.fi
+.RE
+.PP
+A file that cannot be parsed, or has no \fBsessions\fR list, is
+likewise reported and ignored. Problems with this file never stop the
+dashboard from opening.
+.SH FILES
+The file used is the first found of: the \fB\-c\fR option, then
+\fBNOVNC_SESSIONS_FILE\fR, then \fBnovnc-sessions.yaml\fR in
+\fI./config\fR, the checkout's \fIconfig/\fR, \fI~/.config/mu2edaq\fR
+and \fI/etc/mu2edaq\fR. A CMake install puts the shipped copy in
+\fI<prefix>/share/mu2edaq/config\fR.
+.SH EXAMPLES
+.RS
+.nf
+sessions:
+  \- account: mu2eshift
+    display: 2
+    description: >\-
+      Shift crew main desktop. Run\-time monitors live here.
+  \- account: mu2edcs
+    display: 1
+    description: Detector Control System desktop.
+  \- account: mu2e\-remote
+    host: other\-host.fnal.gov
+    description: A session served from another host.
+.fi
+.RE
+.PP
+Check which file a run would use without opening anything:
+.PP
+.RS
+.nf
+scripts/start\-novnc\-connection.sh \-n
+.fi
+.RE
+.SH SEE ALSO
+.BR start-novnc-connection.sh (1),
+.BR install\-ssh\-config.sh (1)
