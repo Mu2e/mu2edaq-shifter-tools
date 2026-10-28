@@ -118,12 +118,16 @@ cannot take the other group down.
 ## Conventions
 
 - Config in `config/` as YAML; static inventories in `data/` as JSON; man pages
-  in `man/man1` and `man/man3`; markdown in `docs/`.
+  in `man/man1`, `man/man3` and `man/man5` (file formats); markdown in `docs/`.
 - Commands are `<verb>-<noun>.sh`. The start/stop pair lives at the top level.
 - The tunnel and VNC commands (`daq-tunnels.sh`, `manage-vnc-servers.sh`,
-  `start-novnc-connection.sh`, `daq-network-verify.sh`) have **no Python
-  dependency** and are config-driven through env/`.env` only. Preserve that —
-  they run from a shifter's laptop.
+  `start-novnc-connection.sh`, `daq-network-verify.sh`) have **no required
+  Python dependency** and are config-driven through env/`.env`. Preserve
+  that: they run from a shifter's laptop. The one exception is
+  `start-novnc-connection.sh`'s dashboard, which needs `python3` and reads
+  `config/novnc-sessions.yaml` with PyYAML *if available*. It is the only
+  YAML read outside `daq-read-config`, and it must keep degrading to portal
+  order with a warning when PyYAML or the file is missing.
 - Portability: system bash on macOS is 3.2, so no `mapfile`, and expand possibly
   empty arrays as `${a[@]+"${a[@]}"}`. Python targets 3.9.
 - Python is `black`-formatted. No linter is configured; do not add one.

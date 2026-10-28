@@ -46,7 +46,9 @@ less often:
 
 The Python commands need Python 3.9 or newer. The shell commands need
 `bash` and `ssh`; the partition lifecycle on the remote side also
-needs `tmux`. The client side needs no Python at all.
+needs `tmux`. The client side needs no Python except for the noVNC
+dashboard, which uses `python3` and, for session descriptions, PyYAML;
+both are optional.
 
 ## Prerequisites
 
@@ -139,6 +141,21 @@ This opens `ssh -J mu2egateway01 -L <free>:localhost:443
 <you>@mu2e-mgr-01` and a browser page with one card per session. Expect
 a certificate warning, because the portal certificate is not issued for
 `localhost`. Each session asks for that account's VNC password.
+
+Each card shows the login account, the host and display it runs on, and
+a description of what the desktop is for. The descriptions and the card
+order come from `config/novnc-sessions.yaml`, and the list order is the
+card order. To use your own order without editing the checkout, copy it
+to `~/.config/mu2edaq/novnc-sessions.yaml`, or pass `--sessions FILE`.
+Reading it needs PyYAML in the `python3` on your PATH:
+
+```sh
+python3 -m pip install --user pyyaml      # once; macOS /usr/bin/python3 lacks it
+scripts/start-novnc-connection.sh -n      # shows which sessions file is used
+```
+
+Without PyYAML the dashboard still opens, in portal order and with no
+descriptions. See `novnc-sessions.yaml(5)`.
 
 ## 1. Remote side: account install on a DAQ host
 

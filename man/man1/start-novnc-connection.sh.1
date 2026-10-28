@@ -1,4 +1,4 @@
-.TH START-NOVNC-CONNECTION.SH 1 "2026-09-14" "mu2edaq-shifter-tools" "User Commands"
+.TH START-NOVNC-CONNECTION.SH 1 "2026-10-28" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a session dashboard
 .SH SYNOPSIS
@@ -9,6 +9,7 @@ start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a ses
 [\fB\-p\fR \fIlocal_port\fR]
 [\fB\-r\fR \fIremote_port\fR]
 [\fB\-P\fR \fIpassword_file\fR]
+[\fB\-c\fR \fIsessions_file\fR]
 [\fB\-n\fR]
 [\fB\-h\fR]
 .SH DESCRIPTION
@@ -30,6 +31,16 @@ If a VNC password file is found (see \fB\-P\fR below), each card's link
 is built with noVNC's \fBpassword\fR and \fBautoconnect=true\fR query
 parameters so the session connects automatically instead of prompting
 for a password.
+.PP
+Each card shows the session's login account, the host it runs on
+(with the X display number when known) and a description of what the
+desktop is for. Descriptions and card order come from
+.BR novnc-sessions.yaml (5)
+(see \fB\-c\fR below). Cards follow that file's order, then any
+sessions the portal offers but the file does not name, in the portal's
+order. Reading the file needs PyYAML in the \fBpython3\fR on your
+\fBPATH\fR; without it, or without the file, the cards appear in portal
+order with no descriptions and one warning says why.
 .PP
 The tunnel, and the temporary directory holding the generated
 dashboard file, are torn down when the script exits, whether via
@@ -73,8 +84,16 @@ without auto-connect. If the file is readable by group or other, a
 warning is printed recommending \fBchmod 600\fR, but the password is
 still used.
 .TP
+.BR \-c ", " \-\-sessions " " \fIFILE\fR
+YAML file of session descriptions and card order; see
+.BR novnc-sessions.yaml (5).
+Environment: \fBNOVNC_SESSIONS_FILE\fR. An explicit file must exist.
+Default: \fBnovnc-sessions.yaml\fR on the toolkit's config search path
+(\fI./config\fR, the checkout's \fIconfig/\fR,
+\fI~/.config/mu2edaq\fR, \fI/etc/mu2edaq\fR), ignored if none is found.
+.TP
 .BR \-n ", " \-\-dry\-run
-Print the ssh command and target URL that would be used, and exit
+Print the ssh command, target URL and sessions file that would be used, and exit
 without opening a tunnel or a browser.
 .TP
 .BR \-h ", " \-\-help
@@ -88,7 +107,7 @@ on Linux, or
 .BR open (1)
 on macOS.
 .TP
-.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE
+.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE ", " NOVNC_SESSIONS_FILE
 See OPTIONS above.
 .SH FILES
 .TP
@@ -96,13 +115,19 @@ See OPTIONS above.
 Default location for the VNC password used to build auto-connecting
 session links. Should be readable only by the owner
 (\fBchmod 600\fR).
+.TP
+.I config/novnc-sessions.yaml
+Shipped session descriptions and card order. A personal copy in
+\fI~/.config/mu2edaq/novnc-sessions.yaml\fR is used when no
+\fIconfig/\fR directory earlier on the search path has one.
 .SH EXIT STATUS
 .TP
 .B 0
 The dry run or help completed.
 .TP
 .B 1
-An option was not recognised, no free local port could be found, or
+An option was not recognised, the \fB\-c\fR file does not exist, no
+free local port could be found, or
 \fBssh\fR exited before the tunnel came up.
 .PP
 Otherwise the script waits on the tunnel and returns the exit status
@@ -135,6 +160,7 @@ start-novnc-connection.sh
 .EE
 .RE
 .SH SEE ALSO
+.BR novnc-sessions.yaml (5),
 .BR install\-ssh\-config.sh (1),
 .BR daq\-ssh\-check.sh (1),
 .BR manage-vnc-servers.sh (1),

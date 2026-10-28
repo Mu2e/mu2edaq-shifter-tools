@@ -90,7 +90,7 @@ configuration that `install-ssh-config.sh` installs.
 | `install-ssh-config.sh` | install the Mu2e ssh configuration; asks for your username and the shared accounts you use |
 | `scripts/daq-ssh-check.sh` | check the Kerberos ticket, the resolved ssh settings, live logins and the noVNC portal |
 | `scripts/daq-tunnels.sh` | open, close and report the control-room GUI port forwards |
-| `scripts/start-novnc-connection.sh` | tunnel to the noVNC manager and open a generated session dashboard |
+| `scripts/start-novnc-connection.sh` | tunnel to the noVNC manager and open a session dashboard; each card shows account, host and a description, ordered by `config/novnc-sessions.yaml` |
 | `scripts/manage-vnc-servers.sh` | start, stop or restart the `vncserver@` units on the manager host |
 
 ### Cluster network (remote side)
