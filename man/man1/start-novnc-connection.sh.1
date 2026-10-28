@@ -12,6 +12,10 @@ start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a ses
 [\fB\-n\fR]
 [\fB\-h\fR]
 .SH DESCRIPTION
+\fBClient side.\fR Run this on your own laptop or workstation, after
+.BR install\-ssh\-config.sh (1)
+has set up the ssh paths and recorded your username as \fBNOVNC_USER\fR.
+.PP
 .B start-novnc-connection.sh
 opens an SSH tunnel from a free local port to port 443 (by default) on
 the noVNC manager host, logged in as the current user unless
@@ -131,5 +135,7 @@ start-novnc-connection.sh
 .EE
 .RE
 .SH SEE ALSO
+.BR install\-ssh\-config.sh (1),
+.BR daq\-ssh\-check.sh (1),
 .BR manage-vnc-servers.sh (1),
 .BR ssh (1)

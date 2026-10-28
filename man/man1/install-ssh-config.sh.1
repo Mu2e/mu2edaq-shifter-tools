@@ -1,0 +1,161 @@
+.TH INSTALL-SSH-CONFIG.SH 1 "2026-10-28" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
+.SH NAME
+install-ssh-config.sh \- install the Mu2e DAQ ssh client configuration on your own computer
+.SH SYNOPSIS
+.B install-ssh-config.sh
+[\fB\-U\fR \fIfnal_user\fR]
+[\fB\-D\fR \fIdaq_user\fR]
+[\fB\-S\fR \fIshift_user\fR]
+[\fB\-C\fR \fIdcs_user\fR]
+[\fB\-c\fR \fIssh_config\fR]
+[\fB\-o\fR \fIfragment\fR]
+[\fB\-e\fR \fIenv_file\fR]
+[\fB\-I\fR]
+[\fB\-y\fR]
+[\fB\-n\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+\fBClient side.\fR Run this on your own laptop or workstation (macOS,
+Linux, or Windows under Git Bash or WSL), never on a DAQ host. The
+DAQ-host counterpart is
+.BR install-login.sh (1).
+.PP
+.B install-ssh-config.sh
+sets up the ssh paths to the Mu2e DAQ: the MC-2 gateway
+\fImu2egateway01\fR and the hosts behind it (\fImu2e\-mgr\-*\fR,
+\fImu2e\-trk*\fR, \fImu2e\-calo*\fR, \fImu2e\-dl\-*\fR,
+\fImu2e\-cfo*\fR, \fImu2e\-dcs\-*\fR), the MC-1 control room and
+cluster workers behind \fIg2gateway01\fR, and the HEERC/IERC teststands
+behind \fImu2edaq\-gateway\fR. It does three things:
+.IP 1. 4
+Renders \fBconfig/ssh\-config\-mu2e.in\fR with your account names and
+installs it, mode 600, as \fI~/.ssh/config_mu2e\fR.
+.IP 2. 4
+Adds \fBInclude ~/.ssh/config_mu2e\fR at the top of
+\fI~/.ssh/config\fR, creating that file if needed. The Include must come
+before every \fBHost\fR or \fBMatch\fR line, because inside a block it
+only applies to hosts that block matches. If an existing Include is
+inside a block, the script says which line to move it above and exits
+with status 1; it does not rearrange your file.
+.IP 3. 4
+Records \fBNOVNC_USER\fR and \fBMU2EDAQ_KRB5_PRINCIPAL\fR in
+\fI~/.mu2edaq/env\fR, where
+.BR start\-novnc\-connection.sh (1)
+and
+.BR daq\-ssh\-check.sh (1)
+read them. Other keys in that file are kept.
+.PP
+The fragment applies only to Mu2e host patterns. It sets \fBUser\fR,
+\fBProxyJump\fR, \fBHostName\fR (short name to \fI.fnal.gov\fR) and
+GSSAPI authentication and delegation, and nothing for \fBHost *\fR.
+Host-key checking, agent forwarding and X11 forwarding stay whatever
+your own configuration says.
+.PP
+Every file that would change is first copied to
+\fI<file>.bak.<YYYYmmddHHMMSS>\fR. Running the script again with the
+same answers changes nothing and makes no backups.
+.SS Prompts
+When standard input is a terminal and \fB\-y\fR is not given, the
+script asks for each value that was not supplied on the command line or
+in the environment, offering a default in brackets:
+.TP
+.B Fermilab username
+Your Kerberos principal is \fI<name>@FNAL.GOV\fR. It is used as the ssh
+login for the noVNC portal on \fImu2e\-mgr\-01\fR and to check which
+ticket is active. Default: \fBNOVNC_USER\fR from \fI~/.mu2edaq/env\fR,
+else the principal shown by \fBklist\fR, else your local login name.
+.TP
+.B Shared DAQ account
+Login on \fImu2egateway01\fR, the MC-2 hosts and the teststands.
+Default \fImu2edaq\fR.
+.TP
+.B Shared shift account
+Login on the MC-1 control room, \fIg2gateway01\fR and the cluster
+workers. Default \fImu2eshift\fR.
+.TP
+.B DCS account
+Login on \fImu2e\-dcs\-*\fR. Default \fImu2edcs\fR.
+.PP
+Your principal must be listed in the \fI.k5login\fR of each shared
+account you use; the installer cannot check that, but
+.BR daq\-ssh\-check.sh (1)
+can. Account names must be lower-case letters, digits, \fB.\fR,
+\fB_\fR or \fB\-\fR.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then the prompt (or its default when not prompting).
+.TP
+.BR \-U ", " \-\-fnal\-user " " \fINAME\fR
+Fermilab username. Environment: \fBMU2EDAQ_FNAL_USER\fR.
+.TP
+.BR \-D ", " \-\-daq\-user " " \fINAME\fR
+Shared DAQ account. Environment: \fBMU2EDAQ_SSH_DAQ_USER\fR.
+.TP
+.BR \-S ", " \-\-shift\-user " " \fINAME\fR
+Shared shift account. Environment: \fBMU2EDAQ_SSH_SHIFT_USER\fR.
+.TP
+.BR \-C ", " \-\-dcs\-user " " \fINAME\fR
+DCS account. Environment: \fBMU2EDAQ_SSH_DCS_USER\fR.
+.TP
+.BR \-c ", " \-\-ssh\-config " " \fIFILE\fR
+ssh configuration to add the Include to. Environment:
+\fBMU2EDAQ_SSH_CONFIG\fR. Default: \fI~/.ssh/config\fR.
+.TP
+.BR \-o ", " \-\-output " " \fIFILE\fR
+Where to install the rendered fragment. Environment:
+\fBMU2EDAQ_SSH_FRAGMENT\fR. Default: \fI~/.ssh/config_mu2e\fR.
+.TP
+.BR \-e ", " \-\-env\-file " " \fIFILE\fR
+Personal settings file. Environment: \fBMU2EDAQ_CLIENT_ENV\fR. Default:
+\fI~/.mu2edaq/env\fR.
+.TP
+.BR \-I ", " \-\-no\-include
+Install the fragment and settings but leave the ssh configuration alone.
+.TP
+.BR \-y ", " \-\-yes
+Never prompt; use the defaults for anything not supplied.
+.TP
+.BR \-n ", " \-\-dry\-run
+Print what would be done and change nothing.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH FILES
+.TP
+.I config/ssh\-config\-mu2e.in
+The template, looked for beside the script, under
+\fB$MU2EDAQ_ROOT\fR\fI/config\fR, then under
+\fI<prefix>/share/mu2edaq/config\fR for a CMake install.
+.TP
+.I ~/.ssh/config_mu2e
+The rendered fragment.
+.TP
+.I ~/.mu2edaq/env
+Personal settings for the client-side commands.
+.SH EXIT STATUS
+0 on success, 1 on an error or a misplaced Include, 2 on a usage error.
+.SH EXAMPLES
+Interactive install, then check the result:
+.PP
+.RS
+.nf
+git clone https://github.com/Mu2e/mu2edaq-shifter-tools.git
+cd mu2edaq-shifter-tools
+\&./install-ssh-config.sh
+kinit jdoe@FNAL.GOV
+scripts/daq-ssh-check.sh
+.fi
+.RE
+.PP
+Unattended, with a non-default DAQ account:
+.PP
+.RS
+.nf
+\&./install-ssh-config.sh \-y \-U jdoe \-D mu2etrk
+.fi
+.RE
+.SH SEE ALSO
+.BR daq\-ssh\-check.sh (1),
+.BR start\-novnc\-connection.sh (1),
+.BR install\-login.sh (1),
+.BR ssh_config (5)

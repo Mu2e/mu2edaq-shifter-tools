@@ -1,0 +1,84 @@
+.TH DAQ-SSH-CHECK.SH 1 "2026-10-28" "mu2edaq-shifter-tools 1.1.0" "Mu2e DAQ Manual"
+.SH NAME
+daq-ssh-check.sh \- check Kerberos and the ssh paths to the Mu2e DAQ hosts
+.SH SYNOPSIS
+.B daq-ssh-check.sh
+[\fB\-H\fR \fI"host ..."\fR]
+[\fB\-F\fR \fIssh_config\fR]
+[\fB\-t\fR \fIseconds\fR]
+[\fB\-s\fR]
+[\fB\-P\fR]
+[\fB\-h\fR]
+.SH DESCRIPTION
+\fBClient side.\fR Run this on your own laptop or workstation after
+.BR install\-ssh\-config.sh (1),
+or whenever ssh to the DAQ stops working. It prints one PASS or FAIL
+line per check, in this order:
+.IP 1. 4
+\fBKerberos.\fR A valid ticket exists, and its default principal equals
+\fBMU2EDAQ_KRB5_PRINCIPAL\fR when that is set (the installer records it).
+On macOS a second \fBkinit\fR silently makes another principal the
+default; the FAIL line then suggests the \fBkswitch\fR command that
+restores yours.
+.IP 2. 4
+\fBResolved settings.\fR For each host, \fBssh \-G\fR must give
+\fBGSSAPIAuthentication yes\fR. MC-2 and MC-1 control-room hosts must
+jump through \fImu2egateway0*\fR, MC-1 workers through
+\fIg2gateway0*\fR, and a gateway must not resolve to your local login
+name (the sign that \fI~/.ssh/config_mu2e\fR is not included). No
+network traffic.
+.IP 3. 4
+\fBLive login.\fR \fBssh \-o BatchMode=yes\fR to each host runs
+\fBid \-un\fR and \fBhostname\fR. A "Permission denied" usually means
+your principal is not in that account's \fI.k5login\fR.
+.IP 4. 4
+\fBnoVNC portal\fR (with \fB\-P\fR). On \fImu2e\-mgr\-01\fR,
+\fBhttps://localhost/\fR must answer 200.
+.PP
+Hosts are checked in the order given, so list a gateway before the
+hosts behind it.
+.SH OPTIONS
+Configuration precedence is command line, then environment variable,
+then .env file, then built-in default.
+.TP
+.BR \-H ", " \-\-hosts " " \fI"H1 H2 ..."\fR
+Hosts to check. Environment: \fBMU2EDAQ_SSH_CHECK_HOSTS\fR. Default:
+\fI"mu2egateway01.fnal.gov mu2e\-mgr\-01.fnal.gov"\fR.
+.TP
+.BR \-F ", " \-\-config " " \fIFILE\fR
+ssh configuration file to evaluate, passed to \fBssh \-F\fR.
+Environment: \fBMU2EDAQ_SSH_CONFIG\fR. Default: ssh's own.
+.TP
+.BR \-t ", " \-\-timeout " " \fISEC\fR
+ssh \fBConnectTimeout\fR for the live checks. Environment:
+\fBMU2EDAQ_SSH_CHECK_TIMEOUT\fR. Default: 15.
+.TP
+.BR \-s ", " \-\-static
+Run steps 1 and 2 only.
+.TP
+.BR \-P ", " \-\-portal
+Also run step 4.
+.TP
+.BR \-h ", " \-\-help
+Show a usage summary and exit.
+.SH ENVIRONMENT
+.TP
+.B MU2EDAQ_KRB5_PRINCIPAL
+Principal the active ticket should belong to; written by
+.BR install\-ssh\-config.sh (1)
+to \fI~/.mu2edaq/env\fR.
+.SH EXIT STATUS
+0 when every check passed, 1 when any failed, 2 on a usage error.
+.SH EXAMPLES
+.RS
+.nf
+scripts/daq\-ssh\-check.sh                 # ticket, settings, logins
+scripts/daq\-ssh\-check.sh \-P              # plus the noVNC portal
+scripts/daq\-ssh\-check.sh \-s \-H mu2e\-dl\-01.fnal.gov
+.fi
+.RE
+.SH SEE ALSO
+.BR install\-ssh\-config.sh (1),
+.BR start\-novnc\-connection.sh (1),
+.BR ssh (1),
+.BR kswitch (1)

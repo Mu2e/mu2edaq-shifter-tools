@@ -10,6 +10,11 @@ install-login.sh \- install the shifter login environment and commands
 [\fB\-n\fR]
 [\fB\-h\fR]
 .SH DESCRIPTION
+\fBRemote side.\fR Run this on a DAQ host, logged in as the shared
+account being set up, never on your own laptop: it replaces the
+account's dotfiles. The laptop counterpart is
+.BR install\-ssh\-config.sh (1).
+.PP
 .B install-login.sh
 deploys the toolkit into a shifter account:
 .TP
@@ -102,6 +107,7 @@ Stage an install into a scratch directory:
 .RE
 .SH SEE ALSO
 .BR bootstrap.sh (1),
+.BR install\-ssh\-config.sh (1),
 .BR get_krb_principal.sh (1),
 .BR get_krb_daq_principal.sh (1),
 .BR set_git_env.sh (1),
