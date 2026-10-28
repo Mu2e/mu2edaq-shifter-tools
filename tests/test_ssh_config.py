@@ -22,7 +22,9 @@ CHECK = REPO_ROOT / "scripts" / "daq-ssh-check.sh"
 TEMPLATE = REPO_ROOT / "config" / "ssh-config-mu2e.in"
 SSH = shutil.which("ssh")
 
-pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="bash is not available")
+pytestmark = pytest.mark.skipif(
+    shutil.which("bash") is None, reason="bash is not available"
+)
 needs_ssh = pytest.mark.skipif(SSH is None, reason="ssh is not available")
 
 
@@ -30,24 +32,35 @@ def install(tmp_path: Path, *args: str, ssh_config: Path | None = None):
     """Run the installer non-interactively with every path under tmp_path."""
     home = tmp_path / "home"
     (home / ".ssh").mkdir(parents=True, exist_ok=True)
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("MU2EDAQ_", "NOVNC_"))}
+    env = {
+        k: v for k, v in os.environ.items() if not k.startswith(("MU2EDAQ_", "NOVNC_"))
+    }
     env["HOME"] = str(home)
     cmd = [
         str(INSTALLER),
         "-y",
-        "-c", str(ssh_config or home / ".ssh" / "config"),
-        "-o", str(home / ".ssh" / "config_mu2e"),
-        "-e", str(home / ".mu2edaq" / "env"),
+        "-c",
+        str(ssh_config or home / ".ssh" / "config"),
+        "-o",
+        str(home / ".ssh" / "config_mu2e"),
+        "-e",
+        str(home / ".mu2edaq" / "env"),
     ] + list(args)
     result = subprocess.run(
-        cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
     )
     return result, home
 
 
 def resolve(config: Path, host: str) -> dict:
     out = subprocess.run(
-        [SSH, "-G", "-F", str(config), host], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL
+        [SSH, "-G", "-F", str(config), host],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
     ).stdout.decode()
     settings = {}
     for line in out.splitlines():
@@ -61,7 +74,9 @@ def test_template_has_no_catch_all_and_no_global_overrides():
     hosts = [line.split()[1:] for line in text.splitlines() if line.startswith("Host ")]
     patterns = {p for line in hosts for p in line}
     assert "*" not in patterns
-    assert "mu2e-*" not in patterns, "a catch-all mu2e-* block shadows the specific families"
+    assert (
+        "mu2e-*" not in patterns
+    ), "a catch-all mu2e-* block shadows the specific families"
     for keyword in ("StrictHostKeyChecking", "ForwardAgent", "Cipher "):
         assert keyword not in text, f"{keyword} must be left to the user's own config"
 
@@ -83,9 +98,13 @@ def test_second_run_changes_nothing(tmp_path):
     install(tmp_path, "-U", "jdoe")
     result, home = install(tmp_path, "-U", "jdoe")
     assert result.returncode == 0
-    assert not list((home / ".ssh").glob("*.bak.*")), "an unchanged rerun must not back up files"
+    assert not list(
+        (home / ".ssh").glob("*.bak.*")
+    ), "an unchanged rerun must not back up files"
     assert not list((home / ".mu2edaq").glob("*.bak.*"))
-    assert (home / ".ssh" / "config").read_text().count("Include ~/.ssh/config_mu2e") == 1
+    assert (home / ".ssh" / "config").read_text().count(
+        "Include ~/.ssh/config_mu2e"
+    ) == 1
 
 
 def test_existing_config_is_backed_up_and_kept_below_the_include(tmp_path):
@@ -102,7 +121,9 @@ def test_existing_config_is_backed_up_and_kept_below_the_include(tmp_path):
 def test_include_inside_a_host_block_is_reported(tmp_path):
     home = tmp_path / "home"
     (home / ".ssh").mkdir(parents=True)
-    (home / ".ssh" / "config").write_text("Host other\n    User me\nInclude ~/.ssh/config_mu2e\n")
+    (home / ".ssh" / "config").write_text(
+        "Host other\n    User me\nInclude ~/.ssh/config_mu2e\n"
+    )
     result, _ = install(tmp_path, "-U", "jdoe")
     assert result.returncode != 0
     assert "Move the Include above line 1" in result.stdout.decode()
@@ -161,7 +182,18 @@ def test_rendered_fragment_routes_each_host_family(tmp_path, host, user, jump):
 
 @needs_ssh
 def test_account_answers_reach_the_fragment(tmp_path):
-    _, home = install(tmp_path, "-U", "jdoe", "-I", "-D", "mu2etrk", "-S", "mu2ecr01", "-C", "mu2edcs2")
+    _, home = install(
+        tmp_path,
+        "-U",
+        "jdoe",
+        "-I",
+        "-D",
+        "mu2etrk",
+        "-S",
+        "mu2ecr01",
+        "-C",
+        "mu2edcs2",
+    )
     fragment = home / ".ssh" / "config_mu2e"
     assert resolve(fragment, "mu2e-mgr-01.fnal.gov")["user"] == "mu2etrk"
     assert resolve(fragment, "mu2e-mc1-worker-01")["user"] == "mu2ecr01"
@@ -179,7 +211,9 @@ def test_check_flags_a_proxyjump_through_the_teststand_gateway(tmp_path):
     env["HOME"] = str(tmp_path)
     result = subprocess.run(
         [str(CHECK), "-s", "-F", str(bad), "-H", "mu2e-mgr-01.fnal.gov"],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
     )
     output = result.stdout.decode()
     assert result.returncode == 1, output
@@ -192,12 +226,22 @@ def test_check_accepts_the_rendered_fragment_statically(tmp_path):
     env = {k: v for k, v in os.environ.items() if not k.startswith("MU2EDAQ_")}
     env["HOME"] = str(tmp_path)
     result = subprocess.run(
-        [str(CHECK), "-s", "-F", str(home / ".ssh" / "config_mu2e"),
-         "-H", "mu2egateway01.fnal.gov mu2e-mgr-01.fnal.gov mu2e-mc1-worker-05"],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=env,
+        [
+            str(CHECK),
+            "-s",
+            "-F",
+            str(home / ".ssh" / "config_mu2e"),
+            "-H",
+            "mu2egateway01.fnal.gov mu2e-mgr-01.fnal.gov mu2e-mc1-worker-05",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
     )
     output = result.stdout.decode()
     # The Kerberos step depends on the machine running the tests, so only
     # the ssh-settings lines are asserted.
-    settings = [line for line in output.splitlines() if "fnal.gov:" in line or "worker" in line]
+    settings = [
+        line for line in output.splitlines() if "fnal.gov:" in line or "worker" in line
+    ]
     assert settings and all(line.startswith("PASS") for line in settings), output
