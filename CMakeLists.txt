@@ -108,6 +108,7 @@ set(MU2EDAQ_TOPLEVEL_SCRIPTS
     start-daq.sh
     stop-daq.sh
     install-login.sh
+    install-ssh-config.sh
     bootstrap.sh)
 
 # Commands and libraries under scripts/.
@@ -122,6 +123,7 @@ set(MU2EDAQ_SCRIPTS
     scripts/start-tmux.sh
     scripts/manage-vnc-servers.sh
     scripts/start-novnc-connection.sh
+    scripts/daq-ssh-check.sh
     scripts/get_krb_principal.sh
     scripts/get_krb_daq_principal.sh
     scripts/set_git_env.sh)

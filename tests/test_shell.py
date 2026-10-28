@@ -23,6 +23,7 @@ COMMANDS = [
     "start-daq.sh",
     "stop-daq.sh",
     "install-login.sh",
+    "install-ssh-config.sh",
     "bootstrap.sh",
     "scripts/create-environment.sh",
     "scripts/daq-status.sh",
@@ -32,6 +33,7 @@ COMMANDS = [
     "scripts/start-tmux.sh",
     "scripts/manage-vnc-servers.sh",
     "scripts/start-novnc-connection.sh",
+    "scripts/daq-ssh-check.sh",
 ]
 
 #: Scripts that are sourced rather than executed.
@@ -76,6 +78,7 @@ def test_script_is_executable(script):
         "start-daq.sh",
         "stop-daq.sh",
         "install-login.sh",
+        "install-ssh-config.sh",
         "bootstrap.sh",
         "scripts/create-environment.sh",
         "scripts/daq-status.sh",
@@ -84,6 +87,7 @@ def test_script_is_executable(script):
         "scripts/start-tmux.sh",
         "scripts/manage-vnc-servers.sh",
         "scripts/start-novnc-connection.sh",
+        "scripts/daq-ssh-check.sh",
     ],
 )
 def test_help_exits_zero_and_prints_usage(script):

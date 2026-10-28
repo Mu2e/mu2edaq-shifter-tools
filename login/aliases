@@ -22,3 +22,15 @@ alias setup-online='source $HOME/bin/setup-online.sh'
 alias daq-status='daq-status.sh'
 alias start-daq='start-daq.sh'
 alias stop-daq='stop-daq.sh'
+
+# Restart the ots instances with the operations checkout's script.
+alias restart_ots='~/ots_ops/daq-operations/restart_ots.sh'
+
+# CRV power-over-ethernet control and ROC consoles, reachable only from
+# the DCS host. The home directory is NFS-shared across the cluster, so
+# the hostname picks where these exist.
+if [[ "$(hostname -s)" == "mu2e-dcs-01" ]]; then
+    alias crv-poe='python3 ~/CRVFirmware/scripts/poe_ctl.py'
+    alias crv-roc1='telnet 192.168.157.91 5003'
+    alias crv-roc2='telnet 192.168.157.92 5003'
+fi

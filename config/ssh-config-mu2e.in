@@ -1,0 +1,71 @@
+# Mu2e DAQ ssh client configuration          -*- ssh-config -*-
+#
+# CLIENT SIDE. Rendered and installed on your laptop or workstation by
+# install-ssh-config.sh as ~/.ssh/config_mu2e, and pulled into
+# ~/.ssh/config by an "Include ~/.ssh/config_mu2e" line at the top of
+# that file. Do not install this on the DAQ hosts.
+#
+# Placeholders filled in by install-ssh-config.sh:
+#   @MU2E_DAQ_USER@    shared account on gateway01, MC-2 hosts, teststands
+#   @MU2E_SHIFT_USER@  shared account on the MC-1 control room and workers
+#   @MU2E_DCS_USER@    account on the DCS hosts
+#
+# Rules this file follows:
+#   * ssh uses the FIRST value it sees for each keyword, so specific
+#     host families come before broad ones and there is no catch-all
+#     "Host mu2e-*" (that pattern used to route MC-2 through the HEERC
+#     teststand gateway).
+#   * Nothing here applies to "Host *". Host-key checking, agent and X11
+#     forwarding stay whatever your own ~/.ssh/config says.
+#   * Every pattern matches both the short name and the .fnal.gov name.
+#
+# Check the result with:  daq-ssh-check.sh
+
+#############################################################################
+# Short names -> fully qualified names, so DNS and the Kerberos host
+# principal (host/<fqdn>@FNAL.GOV) work without CanonicalizeHostname.
+Host mu2egateway0? mu2edaq-gateway mu2edaq0? mu2edaq1? mu2edaq2? mu2e-mgr-* mu2e-trk* mu2e-calo* mu2e-dl-* mu2e-cfo* mu2e-dcs-* mu2e-mc1-cr-* mu2e-mc1-worker-* g2gateway0? !*.fnal.gov
+     HostName %h.fnal.gov
+
+#############################################################################
+# Kerberos for every Mu2e DAQ host and gateway.
+Host mu2egateway0* mu2edaq-gateway* mu2edaq0* mu2edaq1* mu2edaq2* mu2e-mgr-* mu2e-trk* mu2e-calo* mu2e-dl-* mu2e-cfo* mu2e-dcs-* mu2e-mc1-cr-* mu2e-mc1-worker-* g2gateway0*
+     GSSAPIAuthentication      yes
+     GSSAPIDelegateCredentials yes
+
+#############################################################################
+# MC-2: gateways and the DAQ hosts behind them.
+Host mu2egateway0*
+     User @MU2E_DAQ_USER@
+
+# noVNC/VNC manager, tracker, calorimeter, data loggers, CFO
+Host mu2e-mgr-* mu2e-trk* mu2e-calo* mu2e-dl-* mu2e-cfo*
+     User @MU2E_DAQ_USER@
+     ProxyJump mu2egateway01.fnal.gov
+
+# DCS
+Host mu2e-dcs-*
+     User @MU2E_DCS_USER@
+     ProxyJump mu2egateway01.fnal.gov
+
+#############################################################################
+# MC-1: control room and cluster workers.
+Host g2gateway0*
+     User @MU2E_SHIFT_USER@
+
+Host mu2e-mc1-cr-*
+     User @MU2E_SHIFT_USER@
+     ProxyJump mu2egateway01.fnal.gov
+
+Host mu2e-mc1-worker-*
+     User @MU2E_SHIFT_USER@
+     ProxyJump g2gateway01.fnal.gov
+
+#############################################################################
+# HEERC/IERC teststands behind the teststand gateway.
+Host mu2edaq-gateway*
+     User @MU2E_DAQ_USER@
+
+Host mu2edaq04* mu2edaq07* mu2edaq09* mu2edaq10* mu2edaq11* mu2edaq13* mu2edaq14* mu2edaq22*
+     User @MU2E_DAQ_USER@
+     ProxyJump mu2edaq-gateway.fnal.gov

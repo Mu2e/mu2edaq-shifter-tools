@@ -10,17 +10,43 @@ Correctness and reliability matter more than convenience: anything that
 touches a live host has a `--dry-run`, and anything that can interrupt
 data taking asks before it does.
 
+## Client side and remote side
+
+The toolkit runs in two places, and each has its own installer:
+
+- **Client side: your own laptop or workstation.** You install the ssh
+  configuration once with `install-ssh-config.sh`, which asks for your
+  Fermilab username and the shared accounts you use. From there you
+  reach the DAQ: ssh paths, tunnels, and the noVNC desktops.
+- **Remote side: a shared account on a DAQ host** (`mu2eshift@mu2e-mgr-01`,
+  ...). An expert sets it up once with `install-login.sh`, which installs
+  the login dotfiles and `~/bin`. The partition lifecycle runs here.
+
 ## Quick start
 
+### Client side: run on your laptop or workstation
+
 ```sh
-git clone git@github.com:Mu2e/mu2edaq-shifter-tools.git ~/daq-shifter-tools
+git clone https://github.com/Mu2e/mu2edaq-shifter-tools.git
+cd mu2edaq-shifter-tools
+./install-ssh-config.sh            # asks for your username and accounts
+kinit <you>@FNAL.GOV
+scripts/daq-ssh-check.sh -P        # every line should say PASS
+scripts/start-novnc-connection.sh  # VNC desktops on mu2e-mgr-01, in the browser
+```
+
+### Remote side: run on the DAQ host, as the shared account
+
+```sh
+ssh mu2eshift@mu2e-mgr-01.fnal.gov     # from your laptop, after the client setup
+git clone https://github.com/Mu2e/mu2edaq-shifter-tools.git ~/daq-shifter-tools
 cd ~/daq-shifter-tools
 ./bootstrap.sh                 # create venv/ and install dependencies
 ./install-login.sh --dry-run   # see what an account install would change
 ./install-login.sh             # install dotfiles and commands into ~/bin
 ```
 
-Then, after a new login:
+Then, after a new login on that host:
 
 ```sh
 daq-status.sh                  # what is running
@@ -28,8 +54,8 @@ daq-status.sh                  # what is running
 ./stop-daq.sh  -z partition_0  # take it down
 ```
 
-Full instructions, including the CMake install and the platform notes,
-are in [docs/INSTALL.md](docs/INSTALL.md).
+Full instructions, including which command runs where, the CMake
+install and the platform notes, are in [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Commands
 
@@ -38,7 +64,7 @@ Every command supports `--help` and has a man page. Settings resolve as
 setup scripts skip the `.env` tier because they run before one exists,
 and each man page states the precedence its command actually follows.
 
-### Partition lifecycle
+### Partition lifecycle (remote side)
 
 Run on the DAQ cluster. These manage `otsdaq` (`ots`) instances inside
 tmux and, apart from `start-tmux.sh`, read `config/daq-operations.yaml`.
@@ -53,19 +79,27 @@ tmux and, apart from `start-tmux.sh`, read `config/daq-operations.yaml`.
 | `scripts/send-run-control-command.sh` | send a run-control state transition — **not implemented**, see below |
 | `scripts/start-tmux.sh` | build the four-quadrant shifter tmux workspace |
 
-### Workstation access
+### Workstation access (client side)
 
-Run wherever the operator is. These need only `bash` and `ssh` — no
-Python, so they work from a bare laptop.
+Run on your own laptop or workstation. These need only `bash` and `ssh`,
+with no Python, so they work from a bare laptop. They depend on the ssh
+configuration that `install-ssh-config.sh` installs.
 
 | Command | What it does |
 |---|---|
+| `install-ssh-config.sh` | install the Mu2e ssh configuration; asks for your username and the shared accounts you use |
+| `scripts/daq-ssh-check.sh` | check the Kerberos ticket, the resolved ssh settings, live logins and the noVNC portal |
 | `scripts/daq-tunnels.sh` | open, close and report the control-room GUI port forwards |
 | `scripts/start-novnc-connection.sh` | tunnel to the noVNC manager and open a generated session dashboard |
 | `scripts/manage-vnc-servers.sh` | start, stop or restart the `vncserver@` units on the manager host |
-| `scripts/daq-network-verify.sh` | sweep the DAQ private networks and report which hosts answered |
 
-### Login environment
+### Cluster network (remote side)
+
+| Command | What it does |
+|---|---|
+| `scripts/daq-network-verify.sh` | sweep the DAQ private networks (192.168.6/7/157) and report which hosts answered |
+
+### Login environment (remote side)
 
 Sourced from the installed `~/.bash_profile`, in this order.
 
@@ -97,7 +131,8 @@ Installed by `bootstrap.sh --editable`, or by the CMake install.
 | Command | What it does |
 |---|---|
 | `bootstrap.sh` | create `venv/` and install dependencies |
-| `install-login.sh` | install the dotfiles and commands into an account |
+| `install-login.sh` | **remote side**: install the dotfiles and commands into a DAQ-host account |
+| `install-ssh-config.sh` | **client side**: install the ssh configuration on your own computer |
 
 ## How configuration works
 

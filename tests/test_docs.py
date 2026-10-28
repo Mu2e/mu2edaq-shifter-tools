@@ -22,6 +22,7 @@ SHELL_COMMANDS = [
     "start-daq.sh",
     "stop-daq.sh",
     "install-login.sh",
+    "install-ssh-config.sh",
     "bootstrap.sh",
     "scripts/setup-online.sh",
     "scripts/create-environment.sh",
@@ -32,6 +33,7 @@ SHELL_COMMANDS = [
     "scripts/start-tmux.sh",
     "scripts/manage-vnc-servers.sh",
     "scripts/start-novnc-connection.sh",
+    "scripts/daq-ssh-check.sh",
     "scripts/get_krb_principal.sh",
     "scripts/get_krb_daq_principal.sh",
     "scripts/set_git_env.sh",
@@ -174,6 +176,7 @@ def test_env_example_documents_every_variable_the_code_reads():
         REPO_ROOT / "start-daq.sh",
         REPO_ROOT / "stop-daq.sh",
         REPO_ROOT / "install-login.sh",
+        REPO_ROOT / "install-ssh-config.sh",
     ]:
         referenced |= set(pattern.findall(path.read_text()))
 

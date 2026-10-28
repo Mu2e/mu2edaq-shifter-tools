@@ -1,16 +1,52 @@
 # Installing the Mu2e DAQ shifter tools
 
-There are three ways to install this toolkit, for three different
-situations:
+## Two places, two installers
+
+This toolkit is installed in **two different places**, and each place
+has its own installer. Do not run one place's installer in the other.
+
+| | **Client side** | **Remote side** |
+|---|---|---|
+| Where | **your own laptop or workstation** (macOS, Linux, Windows with Git Bash or WSL) | **a shared account on a DAQ host** (`mu2eshift`, `mu2edaq`, ... on `mu2e-mgr-01` and the other cluster nodes) |
+| Who runs it | each person, once per computer | an expert, once per account per host |
+| Installer | [`install-ssh-config.sh`](#0-client-side-your-computer) | [`install-login.sh`](#1-remote-side-account-install-on-a-daq-host) |
+| What it changes | `~/.ssh/config_mu2e`, one `Include` line in `~/.ssh/config`, `~/.mu2edaq/env` (your username) | the account's `~/.bashrc`, `~/.bash_profile`, `~/.aliases`, `~/.bash_logout`, `~/bin/*`, `~/.mu2edaq/env` (`MU2EDAQ_ROOT`) |
+| Asks for personal information | yes: your Fermilab username and the shared accounts you use | no |
+| Then you run | `scripts/daq-ssh-check.sh`, `scripts/start-novnc-connection.sh`, `scripts/daq-tunnels.sh` | `start-daq.sh`, `stop-daq.sh`, `daq-status.sh`, ... |
+
+`~/.mu2edaq/env` exists on both sides and holds different settings on
+each; that is intended, since they are different computers.
+
+`install-login.sh` copies all of `scripts/` into the account's `~/bin`,
+so the client-side commands also land on the DAQ hosts. They are meant
+to be run from your computer.
+
+### Which command runs where
+
+| Command | Client side (your computer) | Remote side (DAQ host) |
+|---|:---:|:---:|
+| `install-ssh-config.sh` | **yes** | no |
+| `scripts/daq-ssh-check.sh` | **yes** | no |
+| `scripts/start-novnc-connection.sh` | **yes** | no |
+| `scripts/daq-tunnels.sh`, `daq-open-tunnels` | **yes** | no |
+| `scripts/manage-vnc-servers.sh` | **yes** (ssh's to the manager host) | no |
+| `install-login.sh` | no | **yes** |
+| `start-daq.sh`, `stop-daq.sh`, `scripts/daq-status.sh` | no | **yes** |
+| `scripts/setup-online.sh`, `scripts/create-environment.sh`, `scripts/start-tmux.sh` | no | **yes** |
+| `scripts/get_krb_principal.sh`, `scripts/set_git_env.sh`, `scripts/get_krb_daq_principal.sh` | no | **yes** (sourced by the login) |
+| `scripts/daq-network-verify.sh`, `daq-cluster-cp`, `daq-ls2json` | no | **yes** (cluster network) |
+
+Besides those two installers there are two other ways to install, used
+less often:
 
 | Situation | Method |
 |---|---|
-| A shifter account on the DAQ cluster | [Account install](#1-account-install) with `install-login.sh` |
 | A packaged deployment under a prefix | [CMake install](#2-cmake-install) |
-| Development on a laptop | [Checkout only](#3-checkout-only) with `bootstrap.sh` |
+| Development | [Checkout only](#3-checkout-only) with `bootstrap.sh` |
 
-All three need Python 3.9 or newer. The shell commands additionally
-need `bash`, `ssh`, and — for the partition lifecycle — `tmux`.
+The Python commands need Python 3.9 or newer. The shell commands need
+`bash` and `ssh`; the partition lifecycle on the remote side also
+needs `tmux`. The client side needs no Python at all.
 
 ## Prerequisites
 
@@ -25,7 +61,90 @@ need `bash`, `ssh`, and — for the partition lifecycle — `tmux`.
 | PyQt5 | `daq-open-tunnels --gui` only | optional; skip with `bootstrap.sh --no-gui` |
 | CMake >= 3.16 | the packaged install only | |
 
-## 1. Account install
+## 0. Client side: your computer
+
+> **Run on: your own laptop or workstation.** Not on a DAQ host.
+
+This sets up the ssh paths everything else depends on: the MC-2 gateway
+`mu2egateway01` and the hosts behind it (including the noVNC manager
+`mu2e-mgr-01`), the MC-1 control room and workers behind `g2gateway01`,
+and the teststands behind `mu2edaq-gateway`. It needs `bash`, `ssh` and
+the Kerberos client (`kinit`, `klist`). Python is not needed.
+
+**Step 1: get a checkout** (anywhere; it is not installed into `~/bin`):
+
+```sh
+git clone https://github.com/Mu2e/mu2edaq-shifter-tools.git
+cd mu2edaq-shifter-tools
+```
+
+**Step 2: install the ssh configuration.** The installer asks for:
+
+| Prompt | Default | Why |
+|---|---|---|
+| Fermilab username | from `klist`, else your local login | your principal `<name>@FNAL.GOV`; also your login for the noVNC portal |
+| Shared DAQ account | `mu2edaq` | login on `mu2egateway01`, MC-2 hosts, teststands |
+| Shared shift account | `mu2eshift` | login on MC-1 control room, `g2gateway01`, workers |
+| DCS account | `mu2edcs` | login on `mu2e-dcs-*` |
+
+Your principal must be in the `.k5login` of each shared account you
+use. If you are not sure, accept the defaults; step 4 will tell you.
+
+```sh
+./install-ssh-config.sh --dry-run    # show what would change
+./install-ssh-config.sh              # asks, then installs
+```
+
+It writes `~/.ssh/config_mu2e` (mode 600), adds
+`Include ~/.ssh/config_mu2e` as the first line of `~/.ssh/config`, and
+records your username in `~/.mu2edaq/env`. Changed files are backed up
+to `<file>.bak.<timestamp>`, and a rerun with the same answers changes
+nothing. To run it unattended, give every value: `./install-ssh-config.sh
+-y -U jdoe`. Nothing is set for `Host *`; host-key checking and agent
+and X11 forwarding stay as your own configuration has them.
+
+If `~/.ssh/config` already has an `Include` of `config_mu2e` inside a
+`Host` or `Match` block, the installer prints which line to move it
+above and exits 1. ssh would otherwise apply it only to that block's
+hosts.
+
+**Step 3: get a ticket.**
+
+```sh
+kinit jdoe@FNAL.GOV
+```
+
+On macOS, `kinit` for a second principal makes that one the default.
+`klist -l` lists them all and `kswitch -p jdoe@FNAL.GOV` switches back.
+
+**Step 4: check.**
+
+```sh
+scripts/daq-ssh-check.sh        # ticket, resolved settings, live logins
+scripts/daq-ssh-check.sh -P     # also the noVNC portal on mu2e-mgr-01
+```
+
+Every line should read `PASS`. A `Permission denied` on a live login
+means your principal is not in that account's `.k5login`; ask the
+account's owner to add it, or rerun step 2 with an account you are
+authorised for.
+
+**Step 5: use it.** For the VNC desktops on `mu2e-mgr-01`:
+
+```sh
+scripts/start-novnc-connection.sh
+```
+
+This opens `ssh -J mu2egateway01 -L <free>:localhost:443
+<you>@mu2e-mgr-01` and a browser page with one card per session. Expect
+a certificate warning, because the portal certificate is not issued for
+`localhost`. Each session asks for that account's VNC password.
+
+## 1. Remote side: account install on a DAQ host
+
+> **Run on: the DAQ host, logged in as the shared account being set up**
+> (for example `ssh mu2eshift@mu2e-mgr-01.fnal.gov`). Not on your laptop:
+> it replaces `~/.bashrc` and `~/.bash_profile`.
 
 This is how a shifter account on the DAQ cluster is set up. It deploys
 the login dotfiles and puts every command on the `PATH`.
