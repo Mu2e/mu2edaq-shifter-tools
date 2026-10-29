@@ -37,12 +37,24 @@ def renderer_source() -> str:
     return match.group(1)
 
 
-def render(tmp_path, sessions="", host="mu2e-mgr-01.fnal.gov", password="", env=None):
+def render(
+    tmp_path,
+    sessions="",
+    host="mu2e-mgr-01.fnal.gov",
+    password="",
+    env=None,
+    tunnel=("", "", "", ""),
+    native="",
+):
+    """tunnel is (ssh user, jump host, remote port, ssh pid); native is the
+    "account=local_port:display ..." map the script passes."""
     portal = tmp_path / "portal.html"
     portal.write_text(PORTAL)
     out = tmp_path / "dashboard.html"
     result = subprocess.run(
-        [sys.executable, "-", portal.as_uri(), str(out), password, str(sessions), host],
+        [sys.executable, "-", portal.as_uri(), str(out), password, str(sessions), host]
+        + list(tunnel)
+        + [native],
         input=renderer_source().encode(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -188,5 +200,128 @@ def test_default_sessions_file_is_found_from_the_checkout(tmp_path):
         cwd=str(tmp_path),
     )
     assert result.returncode == 0, result.stdout.decode()
-    assert "sessions -> " in result.stdout.decode()
-    assert result.stdout.decode().rstrip().endswith("config/novnc-sessions.yaml")
+    assert re.search(
+        r"^sessions -> .*config/novnc-sessions\.yaml$", result.stdout.decode(), re.M
+    ), result.stdout.decode()
+
+
+def plan_source() -> str:
+    text = SCRIPT.read_text()
+    function = text[text.index("plan_native_forwards() {") :]
+    return re.search(r"<<'PY'\n(.*?)\nPY\n", function, re.S).group(1)
+
+
+def plan(sessions, host="mu2e-mgr-01.fnal.gov", avoid="0", env=None):
+    result = subprocess.run(
+        [sys.executable, "-", str(sessions), host, avoid],
+        input=plan_source().encode(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    rows = [line.split() for line in result.stdout.decode().splitlines()]
+    return result, rows
+
+
+def test_native_forwards_are_planned_for_sessions_with_a_display_on_this_host(tmp_path):
+    sessions = write_sessions(
+        tmp_path,
+        """
+sessions:
+  - {account: mu2eshift, display: 2}
+  - {account: mu2edcs, display: 1, host: mu2e-mgr-01.fnal.gov}
+  - {account: mu2etrig}
+  - {account: elsewhere, display: 4, host: other.fnal.gov}
+  - {account: bad, display: "two"}
+""",
+    )
+    result, rows = plan(sessions)
+    assert result.returncode == 0, result.stderr.decode()
+    assert [(r[0], r[1]) for r in rows] == [("mu2eshift", "2"), ("mu2edcs", "1")]
+    ports = [r[2] for r in rows]
+    assert all(p.isdigit() for p in ports) and len(set(ports)) == len(ports)
+
+
+def test_no_native_forwards_without_pyyaml(tmp_path):
+    shadow = tmp_path / "shadow"
+    shadow.mkdir()
+    (shadow / "yaml.py").write_text("raise ImportError('no PyYAML here')\n")
+    env = dict(os.environ, PYTHONPATH=str(shadow))
+    sessions = write_sessions(
+        tmp_path, "sessions:\n  - {account: mu2eshift, display: 2}\n"
+    )
+    result, rows = plan(sessions, env=env)
+    assert result.returncode == 0
+    assert rows == []
+    assert "no native VNC links" in result.stderr.decode()
+
+
+def test_cards_offer_native_vnc_and_show_their_tunnel(tmp_path):
+    sessions = write_sessions(
+        tmp_path,
+        "sessions:\n  - {account: mu2eshift, display: 2}\n  - {account: mu2etrig}\n",
+    )
+    result, page = render(
+        tmp_path,
+        sessions,
+        tunnel=("anorman", "mu2egateway01.fnal.gov", "443", "4242"),
+        native="mu2eshift=61002:2",
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    # Native link and its forward on the card that has one.
+    assert 'href="vnc://localhost:61002"' in page
+    assert "open vnc://localhost:61002" in page
+    assert (
+        "<code>localhost:61002</code> &rarr; <code>mu2e-mgr-01.fnal.gov:5902</code>"
+        in page
+    )
+    # The session without a display gets a disabled button saying why.
+    assert page.count('class="btn btn-off"') == 3  # mu2etrig, mu2ecr01, mu2edcs
+    assert "no display configured" in page
+    # Tunnel panel.
+    assert "<code>anorman@mu2e-mgr-01.fnal.gov</code>" in page
+    assert "via <code>mu2egateway01.fnal.gov</code>" in page
+    assert "pid 4242" in page
+    assert "-J mu2egateway01.fnal.gov" in page and "-L 61002:localhost:5902" in page
+    # Every card still has its noVNC browser link.
+    assert page.count("Browser (noVNC)") == 4
+
+
+def test_a_malformed_native_map_is_ignored(tmp_path):
+    result, page = render(tmp_path, native="mu2eshift=notaport:2 =1:2 mu2edcs=61001:x")
+    assert result.returncode == 0
+    assert "vnc://" not in page
+
+
+def test_dry_run_lists_the_native_forwards(tmp_path):
+    env = {
+        k: v for k, v in os.environ.items() if not k.startswith(("MU2EDAQ_", "NOVNC_"))
+    }
+    env["HOME"] = str(tmp_path)
+    # The python3 that runs the tests has PyYAML; put it first on PATH.
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+    sessions = write_sessions(
+        tmp_path, "sessions:\n  - {account: mu2eshift, display: 2}\n"
+    )
+    result = subprocess.run(
+        [str(SCRIPT), "-n", "-p", "45000", "-c", str(sessions)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
+        cwd=str(tmp_path),
+    )
+    out = result.stdout.decode()
+    assert result.returncode == 0, out
+    assert re.search(r"-L 45000:localhost:443 -L \d+:localhost:5902 ", out), out
+    assert re.search(
+        r"native mu2eshift -> vnc://localhost:\d+ \(mu2e-mgr-01.fnal.gov:5902\)", out
+    )
+
+    off = subprocess.run(
+        [str(SCRIPT), "-n", "-p", "45000", "-c", str(sessions), "--no-native"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
+        cwd=str(tmp_path),
+    )
+    assert "5902" not in off.stdout.decode()

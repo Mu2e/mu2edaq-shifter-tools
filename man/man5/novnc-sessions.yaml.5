@@ -1,4 +1,4 @@
-.TH NOVNC-SESSIONS.YAML 5 "2026-10-28" "mu2edaq-shifter-tools" "File Formats"
+.TH NOVNC-SESSIONS.YAML 5 "2026-10-29" "mu2edaq-shifter-tools" "File Formats"
 .SH NAME
 novnc-sessions.yaml \- descriptions and card order for the noVNC session dashboard
 .SH SYNOPSIS
@@ -32,7 +32,10 @@ HTML in it is escaped, not rendered.
 .TP
 .B display
 X display number of the session on its host. When given, the card
-shows \fIhost\fB:\fIdisplay\fR. Display numbers are not account
+shows \fIhost\fB:\fIdisplay\fR, and, for a session on the tunnel host,
+.BR start-novnc-connection.sh (1)
+forwards a local port to 5900+\fIdisplay\fR so the card can offer a
+native VNC link. Display numbers are not account
 numbers; on mu2e-mgr-01, \fBmu2ecr0\fIN\fR is display \fIN\fR+3.
 .TP
 .B host

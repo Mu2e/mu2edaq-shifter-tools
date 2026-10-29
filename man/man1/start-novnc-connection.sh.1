@@ -1,4 +1,4 @@
-.TH START-NOVNC-CONNECTION.SH 1 "2026-10-28" "mu2edaq-shifter-tools" "User Commands"
+.TH START-NOVNC-CONNECTION.SH 1 "2026-10-29" "mu2edaq-shifter-tools" "User Commands"
 .SH NAME
 start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a session dashboard
 .SH SYNOPSIS
@@ -10,6 +10,7 @@ start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a ses
 [\fB\-r\fR \fIremote_port\fR]
 [\fB\-P\fR \fIpassword_file\fR]
 [\fB\-c\fR \fIsessions_file\fR]
+[\fB\-\-no\-native\fR]
 [\fB\-n\fR]
 [\fB\-h\fR]
 .SH DESCRIPTION
@@ -41,6 +42,21 @@ sessions the portal offers but the file does not name, in the portal's
 order. Reading the file needs PyYAML in the \fBpython3\fR on your
 \fBPATH\fR; without it, or without the file, the cards appear in portal
 order with no descriptions and one warning says why.
+.PP
+For every session the sessions file gives a \fBdisplay\fR for, and that
+runs on the tunnel host, the same ssh also forwards a free local port to
+the session's VNC port, 5900+\fIdisplay\fR. Its card then offers
+\fBNative VNC\fR, a \fBvnc://localhost:\fIport\fR link that macOS opens in
+Screen Sharing, and shows the forward and the equivalent
+\fBopen vnc://localhost:\fIport\fR command. The viewer asks for the
+session's VNC password itself. A session whose host differs from the
+tunnel host gets no native link, because Xvnc listens only on its own
+host's loopback.
+.PP
+A panel at the top of the page describes the tunnel: ssh user and host,
+jump host, ssh pid, the portal forward, the number of native forwards,
+and the complete equivalent \fBssh\fR command. The forwards exist only
+while the script runs.
 .PP
 The tunnel, and the temporary directory holding the generated
 dashboard file, are torn down when the script exits, whether via
@@ -92,8 +108,13 @@ Default: \fBnovnc-sessions.yaml\fR on the toolkit's config search path
 (\fI./config\fR, the checkout's \fIconfig/\fR,
 \fI~/.config/mu2edaq\fR, \fI/etc/mu2edaq\fR), ignored if none is found.
 .TP
+.B \-\-no\-native
+Do not add the native VNC forwards; cards show no native link.
+Environment: \fBNOVNC_NATIVE\fR=\fB0\fR.
+.TP
 .BR \-n ", " \-\-dry\-run
-Print the ssh command, target URL and sessions file that would be used, and exit
+Print the ssh command (with every forward), target URL, sessions file
+and native links that would be used, and exit
 without opening a tunnel or a browser.
 .TP
 .BR \-h ", " \-\-help
@@ -107,7 +128,7 @@ on Linux, or
 .BR open (1)
 on macOS.
 .TP
-.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE ", " NOVNC_SESSIONS_FILE
+.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE ", " NOVNC_SESSIONS_FILE ", " NOVNC_NATIVE
 See OPTIONS above.
 .SH FILES
 .TP

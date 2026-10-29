@@ -22,6 +22,12 @@
 # file needs PyYAML; without it, or without the file, the cards are shown
 # in portal order with no descriptions.
 #
+# For every session the file gives a display for (on the tunnel host),
+# the same ssh also forwards a free local port to that session's VNC
+# port, 5900+display, so the card can offer a native viewer link,
+# vnc://localhost:<port> (macOS opens it in Screen Sharing). The page
+# shows each forward and the portal tunnel it belongs to.
+#
 # Configuration precedence: command line > environment > .env > default.
 #
 #   -H, --host HOST         remote host        (env NOVNC_HOST,
@@ -42,6 +48,7 @@
 #   -c, --sessions FILE     session descriptions (env NOVNC_SESSIONS_FILE,
 #                            and card order         default novnc-sessions.yaml
 #                                                   on the config search path)
+#       --no-native         no native VNC forwards (env NOVNC_NATIVE=0)
 #   -n, --dry-run           print what would happen, do nothing
 #   -h, --help              show this help and exit
 #
@@ -72,10 +79,11 @@ local_port="${NOVNC_LOCAL_PORT:-}"
 remote_port="${NOVNC_REMOTE_PORT:-443}"
 password_file="${NOVNC_PASSWORD_FILE:-$HOME/.novnc_password}"
 sessions_file="${NOVNC_SESSIONS_FILE:-}"
+native="${NOVNC_NATIVE:-1}"
 dry_run=0
 
 USAGE="\
-usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-c sessions_file] [-n]
+usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-c sessions_file] [--no-native] [-n]
 
 Open an SSH tunnel to port $remote_port on the remote host and launch a
 browser pointed at the local end of the tunnel.
@@ -93,6 +101,8 @@ browser pointed at the local end of the tunnel.
   -c, --sessions FILE      YAML file of session descriptions and card order
                            (default novnc-sessions.yaml on the config search
                            path; ignored if absent; needs PyYAML)
+      --no-native          do not forward each session's VNC port for the
+                           native viewer links
   -n, --dry-run            show what would be done, change nothing
   -h, --help               show this help and exit
 "
@@ -106,6 +116,7 @@ while [ -n "${1:-}" ]; do
         -r|--remote-port)   shift; remote_port="${1:-}";;
         -P|--password-file) shift; password_file="${1:-}";;
         -c|--sessions)      shift; sessions_file="${1:-}";;
+        --no-native)        native=0;;
         -n|--dry-run)       dry_run=1;;
         -h|--help)          echo "$USAGE"; exit 0;;
         *) echo "Unknown option: $1" >&2; echo "$USAGE" >&2; exit 1;;
@@ -172,13 +183,70 @@ open_browser() {
     fi
 }
 
+# plan_native_forwards SESSIONS_FILE TUNNEL_HOST AVOID_PORT
+#
+# Print "account display local_port" for every session in the sessions
+# file that has a display and runs on the tunnel host (Xvnc listens on
+# that host's loopback only, so a forward through it cannot reach
+# another host's sessions). Local ports are free ports, all held open
+# at once while choosing so no two are the same, and never AVOID_PORT.
+# Prints nothing, after one warning, when PyYAML is missing; problems
+# with the file itself are left to the renderer to report.
+plan_native_forwards() {
+    command -v python3 >/dev/null 2>&1 || return 0
+    python3 - "$1" "$2" "$3" <<'PY'
+import socket
+import sys
+
+path, tunnel_host, avoid = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    import yaml
+except ImportError:
+    sys.stderr.write("WARNING: PyYAML is not installed, so no native VNC links\n")
+    sys.exit(0)
+try:
+    with open(path, encoding="utf-8") as fh:
+        entries = (yaml.safe_load(fh) or {}).get("sessions") or []
+except Exception:
+    sys.exit(0)
+
+wanted = []
+for entry in entries:
+    if not isinstance(entry, dict) or not entry.get("account"):
+        continue
+    display = entry.get("display")
+    if isinstance(display, bool) or not isinstance(display, int) or display < 0:
+        continue
+    if entry.get("host") and str(entry["host"]) != tunnel_host:
+        continue
+    wanted.append((str(entry["account"]), display))
+
+held = []
+try:
+    for account, display in wanted:
+        while True:
+            s = socket.socket()
+            s.bind(("127.0.0.1", 0))
+            if str(s.getsockname()[1]) != avoid:
+                break
+            s.close()
+        held.append(s)
+        print(account, display, s.getsockname()[1])
+finally:
+    for s in held:
+        s.close()
+PY
+}
+
 # Fetch the noVNC session-list page at $1 and render it into a
 # self-contained dashboard HTML file at $2, one card per session link.
 # If a password is given as $3, each link is built with noVNC's
 # password/autoconnect query parameters so it connects automatically.
 # $4 is the sessions file (descriptions and card order; may be empty)
 # and $5 the host the tunnel reaches, shown on every card unless the
-# sessions file names another.
+# sessions file names another. $6-$9 describe the tunnel (ssh user, jump
+# host, remote port, ssh pid) for the tunnel panel, and $10 lists the
+# native VNC forwards as "account=local_port:display ...".
 # Requires python3; returns non-zero if unavailable or the fetch/parse
 # fails, in which case the caller should fall back to the raw page.
 # Problems with the sessions file are warnings, never failures.
@@ -191,15 +259,27 @@ render_dashboard() {
 
     command -v python3 >/dev/null 2>&1 || return 1
 
-    python3 - "$base_url" "$out_file" "$password" "$sessions" "$default_host" <<'PY'
+    python3 - "$base_url" "$out_file" "$password" "$sessions" "$default_host" \
+        "${6:-}" "${7:-}" "${8:-}" "${9:-}" "${10:-}" <<'PY'
 import html
 import ssl
 import sys
 import urllib.request
 from html.parser import HTMLParser
-from urllib.parse import urljoin, quote
+from urllib.parse import urljoin, quote, urlparse
 
-base_url, out_file, password, sessions_file, default_host = (sys.argv[1:6] + [""] * 5)[:5]
+(base_url, out_file, password, sessions_file, default_host,
+ ssh_user, jump, remote_port, ssh_pid, native_spec) = (sys.argv[1:11] + [""] * 10)[:10]
+portal_port = urlparse(base_url).port or ""
+portal_port = str(portal_port)
+
+# "account=local_port:display ..." -> {account: (local_port, display)}
+native = {}
+for item in native_spec.split():
+    account, _, rest = item.partition("=")
+    lport, _, disp = rest.partition(":")
+    if account and lport.isdigit() and disp.isdigit():
+        native[account] = (lport, disp)
 
 
 def warn(message):
@@ -307,22 +387,99 @@ for name, href, entry in ordered:
         link = f"{link}{sep}password={quote(password, safe='')}&autoconnect=true"
     host = str(entry.get("host") or default_host)
     display = entry.get("display")
+    forward = native.get(name)
+    if forward and display in (None, ""):
+        display = forward[1]
     where = host + (":%s" % display if display not in (None, "") else "")
     description = str(entry.get("description") or "").strip()
+
+    if forward:
+        lport, disp = forward
+        vnc_url = "vnc://localhost:%s" % lport
+        native_btn = '<a class="btn" href="{u}" title="Opens the native viewer (Screen Sharing on macOS)">Native VNC</a>'.format(
+            u=html.escape(vnc_url)
+        )
+        native_line = (
+            '<div class="tun-row"><span class="tun-key">native</span>'
+            "<code>localhost:{lp}</code> &rarr; <code>{h}:{rp}</code></div>"
+            '<div class="tun-row"><span class="tun-key">open</span>'
+            '<code class="sel">open {u}</code></div>'
+        ).format(lp=lport, h=html.escape(host), rp=5900 + int(disp), u=html.escape(vnc_url))
+    else:
+        reason = "no display configured" if display in (None, "") else "not forwarded"
+        native_btn = '<span class="btn btn-off" title="{r}">Native VNC</span>'.format(r=reason)
+        native_line = (
+            '<div class="tun-row"><span class="tun-key">native</span>'
+            '<span class="muted">{r}</span></div>'
+        ).format(r=reason)
+
     cards.append(
-        '<a class="card" href="{url}" target="_blank" rel="noopener">'
+        '<div class="card">'
+        '<a class="card-main" href="{url}" target="_blank" rel="noopener">'
         '<div class="card-icon">&#128421;&#65039;</div>'
         '<div class="card-name">{name}</div>'
         '<div class="card-host">{where}</div>'
         '<div class="card-desc{empty}">{desc}</div>'
-        "</a>".format(
+        "</a>"
+        '<div class="card-actions">'
+        '<a class="btn" href="{url}" target="_blank" rel="noopener">Browser (noVNC)</a>'
+        "{native_btn}"
+        "</div>"
+        '<div class="card-tunnel">'
+        '<div class="tun-row"><span class="tun-key">noVNC</span>'
+        "<code>localhost:{pport}</code> &rarr; <code>{thost}:{rport}</code></div>"
+        "{native_line}"
+        "</div>"
+        "</div>".format(
             url=html.escape(link),
             name=html.escape(name),
             where=html.escape(where),
             empty="" if description else " card-desc-none",
             desc=html.escape(description) if description else "no description configured",
+            native_btn=native_btn,
+            native_line=native_line,
+            pport=html.escape(portal_port),
+            thost=html.escape(default_host),
+            rport=html.escape(remote_port),
         )
     )
+
+ssh_cmd = "ssh -N%s -L %s:localhost:%s%s %s@%s" % (
+    " -J " + jump if jump else "",
+    portal_port,
+    remote_port,
+    "".join(" -L %s:localhost:%d" % (lp, 5900 + int(d)) for lp, d in native.values()),
+    ssh_user,
+    default_host,
+)
+tunnel_panel = (
+    '<section class="tunnel">'
+    '<div class="tun-title">Tunnel</div>'
+    '<div class="tun-grid">'
+    '<span class="tun-key">ssh</span><span><code>{who}@{thost}</code>{via}{pid}</span>'
+    '<span class="tun-key">noVNC</span><span><code>localhost:{pport}</code> &rarr; '
+    "<code>{thost}:{rport}</code> (portal)</span>"
+    '<span class="tun-key">native</span><span>{nat}</span>'
+    '<span class="tun-key">command</span><span><code class="sel">{cmd}</code></span>'
+    "</div>"
+    '<div class="tun-note">These forwards exist only while start-novnc-connection.sh '
+    "is running in your terminal; Ctrl-C there closes all of them.</div>"
+    "</section>"
+).format(
+    who=html.escape(ssh_user),
+    thost=html.escape(default_host),
+    via=(" via <code>%s</code>" % html.escape(jump)) if jump else "",
+    pid=(" &middot; pid %s" % html.escape(ssh_pid)) if ssh_pid else "",
+    pport=html.escape(portal_port),
+    rport=html.escape(remote_port),
+    nat=(
+        "%d session(s), one local port each to <code>%s:59xx</code>"
+        % (len(native), html.escape(default_host))
+        if native
+        else '<span class="muted">none (no displays in the sessions file, or --no-native)</span>'
+    ),
+    cmd=html.escape(ssh_cmd),
+)
 
 page = """<!DOCTYPE html>
 <html lang="en">
@@ -361,17 +518,40 @@ page = """<!DOCTYPE html>
   .card {{
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 1.5rem 1rem;
+    gap: 0.75rem;
+    padding: 1.25rem 1rem 1rem;
     background: var(--card-bg);
     border-radius: 12px;
-    text-decoration: none;
-    color: var(--text);
-    transition: transform 0.15s ease, background 0.15s ease;
     border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }}
-  .card:hover {{ background: var(--card-hover); border-color: var(--accent); transform: translateY(-2px); }}
+  .card:hover {{ background: var(--card-hover); border-color: var(--accent); }}
+  .card-main {{
+    display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+    text-decoration: none; color: var(--text);
+  }}
+  .card-actions {{ display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }}
+  .btn {{
+    font-size: 0.8rem; padding: 0.35rem 0.7rem; border-radius: 6px;
+    border: 1px solid var(--accent); color: var(--accent); text-decoration: none;
+  }}
+  .btn:hover {{ background: var(--accent); color: var(--bg); }}
+  .btn-off {{ border-color: var(--muted); color: var(--muted); opacity: 0.6; cursor: not-allowed; }}
+  .btn-off:hover {{ background: transparent; color: var(--muted); }}
+  .card-tunnel {{ border-top: 1px solid var(--card-hover); padding-top: 0.6rem; font-size: 0.75rem; display: grid; gap: 0.25rem; }}
+  .tun-row {{ display: flex; gap: 0.4rem; align-items: baseline; flex-wrap: wrap; min-width: 0; }}
+  .tun-key {{ color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.65rem; min-width: 3.6rem; }}
+  code {{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.75rem; word-break: break-all; }}
+  .sel {{ user-select: all; }}
+  .muted {{ color: var(--muted); }}
+  .tunnel {{
+    max-width: 1100px; margin: 0 auto 2rem; padding: 1rem 1.25rem;
+    background: var(--card-bg); border-radius: 12px; border: 1px solid var(--card-hover);
+  }}
+  .tun-title {{ font-weight: 600; margin-bottom: 0.6rem; }}
+  .tun-grid {{ display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; font-size: 0.85rem; min-width: 0; }}
+  .tun-grid > span {{ min-width: 0; }}
+  .tun-note {{ color: var(--muted); font-size: 0.75rem; margin-top: 0.7rem; }}
   .card-icon {{ font-size: 2rem; }}
   .card-name {{ font-weight: 600; word-break: break-word; text-align: center; }}
   .card-host {{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; color: var(--accent); word-break: break-all; text-align: center; }}
@@ -383,6 +563,7 @@ page = """<!DOCTYPE html>
 <body>
   <h1>Mu2eDAQ noVNC Sessions</h1>
   <div class="subtitle">Mu2eDAQ &middot; {base_url}</div>
+  {tunnel}
   <div class="grid">
     {cards}
   </div>
@@ -392,6 +573,7 @@ page = """<!DOCTYPE html>
 """.format(
     base_url=html.escape(base_url),
     cards="\n    ".join(cards),
+    tunnel=tunnel_panel,
     source=(" from " + html.escape(sessions_file)) if sessions else "",
 )
 
@@ -406,16 +588,36 @@ fi
 
 url="https://localhost:$local_port"
 
+# Native VNC forwards, carried by the same ssh as the portal tunnel.
+# native_map is "account=local_port:display ..." for the renderer.
+native_opts=()
+native_map=""
+native_count=0
+if [ "$native" != "0" ] && [ -n "$sessions_file" ]; then
+    native_plan=$(plan_native_forwards "$sessions_file" "$host" "$local_port")
+    while read -r n_account n_display n_port; do
+        [ -n "$n_account" ] || continue
+        native_opts+=(-L "$n_port:localhost:$((5900 + n_display))")
+        native_map="$native_map $n_account=$n_port:$n_display"
+        native_count=$((native_count + 1))
+    done <<< "$native_plan"
+fi
+
 if [ "$dry_run" -eq 1 ]; then
-    echo "ssh -N -o ExitOnForwardFailure=yes${jump_opts[*]:+ ${jump_opts[*]}} -L $local_port:localhost:$remote_port $user@$host"
+    echo "ssh -N -o ExitOnForwardFailure=yes${jump_opts[*]:+ ${jump_opts[*]}} -L $local_port:localhost:$remote_port${native_opts[*]:+ ${native_opts[*]}} $user@$host"
     echo "browser -> $url"
     echo "sessions -> ${sessions_file:-none (portal order, no descriptions)}"
+    for entry in $native_map; do
+        n_port=${entry#*=}; n_port=${n_port%%:*}
+        echo "native ${entry%%=*} -> vnc://localhost:$n_port (${host}:$((5900 + ${entry##*:})))"
+    done
     exit 0
 fi
 
 echo "Opening SSH tunnel: localhost:$local_port -> $user@$host:$remote_port${proxy_jump:+ (via $proxy_jump)}"
+[ "$native_count" -gt 0 ] && echo "  plus $native_count native VNC forward(s) to $host:59xx"
 ssh -N -o ExitOnForwardFailure=yes ${jump_opts[@]:+"${jump_opts[@]}"} \
-    -L "$local_port:localhost:$remote_port" "$user@$host" &
+    -L "$local_port:localhost:$remote_port" ${native_opts[@]+"${native_opts[@]}"} "$user@$host" &
 ssh_pid=$!
 
 # Tear the tunnel (and any generated dashboard dir) down on exit / Ctrl-C.
@@ -465,7 +667,9 @@ if [ -n "$dashboard_dir" ]; then
     dashboard_file="$dashboard_dir/dashboard.html"
     built=0
     for _ in $(seq 1 15); do
-        if render_dashboard "$url" "$dashboard_file" "$password" "$sessions_file" "$host" 2>"$dashboard_dir/render.err"; then
+        if render_dashboard "$url" "$dashboard_file" "$password" "$sessions_file" "$host" \
+                "$user" "$proxy_jump" "$remote_port" "$ssh_pid" "$native_map" \
+                2>"$dashboard_dir/render.err"; then
             built=1
             break
         fi
