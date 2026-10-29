@@ -157,6 +157,21 @@ scripts/start-novnc-connection.sh -n      # shows which sessions file is used
 Without PyYAML the dashboard still opens, in portal order and with no
 descriptions. See `novnc-sessions.yaml(5)`.
 
+Each card also has a **Native VNC** button. For every session with a
+`display` in that file, the same ssh forwards a free local port to the
+session's VNC port (5900 + display), and the button opens
+`vnc://localhost:<port>`, which macOS hands to Screen Sharing. The card
+shows that forward and the `open vnc://localhost:<port>` command, and a
+panel at the top shows the whole tunnel and its equivalent `ssh` command.
+The forwards close when you press Ctrl-C in the terminal running the
+script. Use `--no-native` to skip them.
+
+The file arranges the cards in labeled groups (`groups:`), drawn with a
+separator between them. A session on a host other than the portal's,
+such as the MC-1 control room consoles, gets a card with no browser
+link and, once it has a `display`, a native link through its own ssh
+to that host.
+
 ## 1. Remote side: account install on a DAQ host
 
 > **Run on: the DAQ host, logged in as the shared account being set up**

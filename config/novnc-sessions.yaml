@@ -3,10 +3,18 @@
 # CLIENT SIDE. Read by scripts/start-novnc-connection.sh on your laptop
 # when it builds the session dashboard. See novnc-sessions.yaml(5).
 #
-# The cards appear in the order of this list. A session the portal
-# offers but this file does not name is shown after these, in the
-# portal's order, marked "no description configured". An entry the
-# portal does not offer is reported and skipped.
+# Sessions are arranged in groups. Each group is drawn under its label,
+# with a separator line between groups, and groups and cards appear in
+# the order of this file. A session on the portal host must be one the
+# portal offers (an entry it does not offer is reported and skipped).
+# A session on any other host gets a card of its own, with a native VNC
+# link through an ssh to that host when it has a display. Portal sessions
+# this file does not name are added in a final "Other sessions" group.
+# A flat top-level "sessions:" list (no groups) still works.
+#
+# Fields per group:
+#   label        heading shown above the group (optional)
+#   sessions     list of sessions, fields below
 #
 # Fields per session:
 #   account      login account, exactly as the portal's session list
@@ -15,6 +23,9 @@
 #   display      X display number on the host, shown as host:display
 #   host         the host running the session; default is the host the
 #                tunnel goes to (NOVNC_HOST, normally mu2e-mgr-01.fnal.gov)
+#   ssh_user     login for the ssh to another host (default: your ssh
+#                config; ~/.ssh/config_mu2e logs mu2e-mc1-cr-* in as mu2eshift)
+#   jump         ProxyJump for that ssh (default: your ssh config)
 #
 # Reading this file needs PyYAML in the python3 on your PATH
 # (python3 -m pip install --user pyyaml). Without it the dashboard still
@@ -27,44 +38,70 @@
 # (/etc/tigervnc/vncserver.users). Display numbers are not account
 # numbers: mu2ecr0N is display N+3.
 
-sessions:
-  - account: mu2eshift
-    display: 2
-    description: >-
-      Shift crew main desktop (3840x2160). Run-time monitors such as the
-      discovery browser and the diskwatcher dashboard live here.
+groups:
+  - label: mu2e-mgr-01 (MC-2)
+    sessions:
+      - account: mu2eshift
+        display: 2
+        description: >-
+          Shift crew main desktop (3840x2160). Run-time monitors such as the
+          discovery browser and the diskwatcher dashboard live here.
 
-  - account: mu2edcs
-    display: 1
-    description: >-
-      Detector Control System (DCS) desktop for slow controls
-      (1280x720, resizable).
+      - account: mu2edcs
+        display: 1
+        description: >-
+          Detector Control System (DCS) desktop for slow controls
+          (1280x720, resizable).
 
-  - account: mu2etrig
-    display: 3
-    description: >-
-      Trigger desktop (1280x720, resizable).
+      - account: mu2etrig
+        display: 3
+        description: >-
+          Trigger desktop (1280x720, resizable).
 
-  - account: mu2ecr01
-    display: 4
-    description: Control-room screen 1 (1920x2160).
+  - label: mu2e-mgr-01 Control-Room Screens
+    sessions:
+      - account: mu2ecr01
+        display: 4
+        description: Control-room screen 1 (1920x2160).
 
-  - account: mu2ecr02
-    display: 5
-    description: Control-room screen 2 (1920x2160).
+      - account: mu2ecr02
+        display: 5
+        description: Control-room screen 2 (1920x2160).
 
-  - account: mu2ecr03
-    display: 6
-    description: Control-room screen 3 (1920x2160).
+      - account: mu2ecr03
+        display: 6
+        description: Control-room screen 3 (1920x2160).
 
-  - account: mu2ecr04
-    display: 7
-    description: Control-room screen 4 (1920x2160).
+      - account: mu2ecr04
+        display: 7
+        description: Control-room screen 4 (1920x2160).
 
-  - account: mu2ecr05
-    display: 8
-    description: Control-room screen 5 (1920x2160).
+      - account: mu2ecr05
+        display: 8
+        description: Control-room screen 5 (1920x2160).
 
-  - account: mu2ecr06
-    display: 9
-    description: Control-room screen 6 (1920x2160).
+      - account: mu2ecr06
+        display: 9
+        description: Control-room screen 6 (1920x2160).
+
+  - label: MC-1 Control Room
+    # No VNC server runs on these four yet (surveyed 2026-10-29: AlmaLinux
+    # 10.2, Puppet-managed, tigervnc-server not installed). Add
+    # "display: N" to each once vncserver@:N runs for mu2eshift; that
+    # alone turns on its native VNC link.
+    sessions:
+      - account: mu2eshift
+        host: mu2e-mc1-cr-01.fnal.gov
+        description: MC-1 control room console 1, shift account.
+
+      - account: mu2eshift
+        host: mu2e-mc1-cr-02.fnal.gov
+        description: MC-1 control room console 2, shift account.
+
+      - account: mu2eshift
+        host: mu2e-mc1-cr-03.fnal.gov
+        description: MC-1 control room console 3, shift account.
+
+      - account: mu2eshift
+        host: mu2e-mc1-cr-04.fnal.gov
+        description: MC-1 control room console 4, shift account.
