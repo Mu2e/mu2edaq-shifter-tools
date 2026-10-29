@@ -11,15 +11,33 @@ novnc-sessions.yaml \- descriptions and card order for the noVNC session dashboa
 reads this file on your laptop when it builds the session dashboard. It
 gives each VNC session a description and puts the cards in order.
 .PP
-The file is a YAML mapping with one key, \fBsessions\fR, whose value is
-a list. \fBThe order of the list is the order of the cards.\fR A
-session the noVNC portal offers but the list does not name is shown
-after the listed ones, in the portal's order, with "no description
-configured". An entry naming an account the portal does not offer is
-reported on standard error and skipped, because there is no link to
-draw.
+The file is a YAML mapping whose key \fBgroups\fR holds a list of
+groups. Each group is drawn under its label, with a separator line
+between groups, and \fBgroups and cards appear in the order of the
+file.\fR A group is a mapping with these keys:
+.TP
+.B label
+Heading shown above the group. Optional.
+.TP
+.B sessions
+List of sessions, described below. Required; a group without it is
+reported and skipped.
 .PP
-Each list entry is a mapping with these keys:
+For backward compatibility a file may instead have a flat top-level
+\fBsessions\fR list, which is one unlabeled group. A file with both
+uses \fBgroups\fR and says so.
+.PP
+A session on the tunnel host (the noVNC portal's host) must be one the
+portal offers, since the portal supplies its browser link; an entry the
+portal does not offer is reported on standard error and skipped. A
+session on \fBany other host\fR gets a card of its own. It has no browser
+link, because the portal serves only its own host, and, when it has a
+\fBdisplay\fR, a native VNC link through an ssh to that host. Portal
+sessions the file does not name follow at the end: in the last group
+when no group has a label, otherwise in a group labeled "Other sessions
+on \fIhost\fR".
+.PP
+Each session is a mapping with these keys:
 .TP
 .B account
 Login account, exactly as the portal's session list names it, for
@@ -40,7 +58,19 @@ numbers; on mu2e-mgr-01, \fBmu2ecr0\fIN\fR is display \fIN\fR+3.
 .TP
 .B host
 Host running the session. Default: the host the tunnel goes to
-(\fBNOVNC_HOST\fR, normally \fImu2e\-mgr\-01.fnal.gov\fR).
+(\fBNOVNC_HOST\fR, normally \fImu2e\-mgr\-01.fnal.gov\fR). The same
+account may appear on several hosts; a session is identified by
+\fIaccount\fB@\fIhost\fR.
+.TP
+.B ssh_user
+For a session on another host: the login for the ssh that carries its
+native forward. Default: whatever your ssh configuration says
+(\fI~/.ssh/config_mu2e\fR logs \fBmu2e\-mc1\-cr\-*\fR in as
+\fBmu2eshift\fR).
+.TP
+.B jump
+For a session on another host: ProxyJump host for that ssh. Default:
+your ssh configuration.
 .PP
 Other keys are ignored.
 .SH REQUIREMENTS
@@ -67,17 +97,21 @@ and \fI/etc/mu2edaq\fR. A CMake install puts the shipped copy in
 .SH EXAMPLES
 .RS
 .nf
-sessions:
-  \- account: mu2eshift
-    display: 2
-    description: >\-
-      Shift crew main desktop. Run\-time monitors live here.
-  \- account: mu2edcs
-    display: 1
-    description: Detector Control System desktop.
-  \- account: mu2e\-remote
-    host: other\-host.fnal.gov
-    description: A session served from another host.
+groups:
+  \- label: mu2e\-mgr\-01 (MC\-2)
+    sessions:
+      \- account: mu2eshift
+        display: 2
+        description: Shift crew main desktop.
+      \- account: mu2edcs
+        display: 1
+        description: Detector Control System desktop.
+  \- label: MC\-1 Control Room
+    sessions:
+      \- account: mu2eshift
+        host: mu2e\-mc1\-cr\-01.fnal.gov
+        display: 2
+        description: MC\-1 control room console 1.
 .fi
 .RE
 .PP

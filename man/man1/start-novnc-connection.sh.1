@@ -50,8 +50,12 @@ the session's VNC port, 5900+\fIdisplay\fR. Its card then offers
 Screen Sharing, and shows the forward and the equivalent
 \fBopen vnc://localhost:\fIport\fR command. The viewer asks for the
 session's VNC password itself. A session whose host differs from the
-tunnel host gets no native link, because Xvnc listens only on its own
-host's loopback.
+session on another host gets its native forward through a separate ssh
+to that host, because Xvnc listens only on its own host's loopback; the
+tunnel panel lists each such ssh with its pid and command. Cards are
+arranged in the labeled groups of
+.BR novnc-sessions.yaml (5),
+with a separator between groups.
 .PP
 A panel at the top of the page describes the tunnel: ssh user and host,
 jump host, ssh pid, the portal forward, the number of native forwards,

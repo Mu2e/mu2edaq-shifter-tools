@@ -166,6 +166,12 @@ panel at the top shows the whole tunnel and its equivalent `ssh` command.
 The forwards close when you press Ctrl-C in the terminal running the
 script. Use `--no-native` to skip them.
 
+The file arranges the cards in labeled groups (`groups:`), drawn with a
+separator between them. A session on a host other than the portal's,
+such as the MC-1 control room consoles, gets a card with no browser
+link and, once it has a `display`, a native link through its own ssh
+to that host.
+
 ## 1. Remote side: account install on a DAQ host
 
 > **Run on: the DAQ host, logged in as the shared account being set up**
