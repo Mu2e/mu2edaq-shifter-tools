@@ -185,9 +185,11 @@ open_browser() {
 
 # plan_native_forwards SESSIONS_FILE TUNNEL_HOST AVOID_PORT
 #
-# Print "account host display local_port ssh_user jump" (with "-" for an
-# unset ssh_user or jump) for every session in the sessions file that has
-# a display. Sessions on the tunnel host ride on the portal ssh; each
+# Print "kind account host remote_port local_port ssh_user jump" (with "-"
+# for an unset ssh_user or jump) for every native forward the sessions file
+# asks for: kind "vnc" for a session with a display (remote port
+# 5900+display), kind "rdp" for one with "rdp:" (true means 3389, or a
+# port number). Sessions on the tunnel host ride on the portal ssh; each
 # other host gets an ssh of its own, because Xvnc listens on its own
 # host's loopback only. Local ports are free ports, all held open at once
 # while choosing so no two are the same, and never AVOID_PORT. Prints
@@ -232,25 +234,31 @@ def word(value):
     return text if text and not any(c.isspace() for c in text) else "-"
 
 
+def number(value, low, high):
+    return not isinstance(value, bool) and isinstance(value, int) and low <= value <= high
+
+
 wanted = []
 for entry in entries(data):
     if not isinstance(entry, dict) or not entry.get("account"):
         continue
-    display = entry.get("display")
-    if isinstance(display, bool) or not isinstance(display, int) or display < 0:
-        continue
+    account = word(entry["account"])
     host = word(entry.get("host")) if entry.get("host") else tunnel_host
-    if host == "-":
+    if account == "-" or host == "-":
         continue
-    wanted.append(
-        (word(entry["account"]), host, display, word(entry.get("ssh_user")), word(entry.get("jump")))
-    )
+    user, hop = word(entry.get("ssh_user")), word(entry.get("jump"))
+    display = entry.get("display")
+    if number(display, 0, 99):
+        wanted.append(("vnc", account, host, 5900 + display, user, hop))
+    rdp = entry.get("rdp")
+    if rdp is True:
+        wanted.append(("rdp", account, host, 3389, user, hop))
+    elif number(rdp, 1, 65535):
+        wanted.append(("rdp", account, host, rdp, user, hop))
 
 held = []
 try:
-    for account, host, display, ssh_user, jump in wanted:
-        if account == "-":
-            continue
+    for kind, account, host, rport, ssh_user, jump in wanted:
         while True:
             s = socket.socket()
             s.bind(("127.0.0.1", 0))
@@ -258,7 +266,7 @@ try:
                 break
             s.close()
         held.append(s)
-        print(account, host, display, s.getsockname()[1], ssh_user, jump)
+        print(kind, account, host, rport, s.getsockname()[1], ssh_user, jump)
 finally:
     for s in held:
         s.close()
@@ -274,7 +282,8 @@ PY
 # sessions file names another. $6-$9 describe the tunnel (ssh user, jump
 # host, remote port, ssh pid) for the tunnel panel, $10 lists the native
 # VNC forwards as "account@host=local_port:display ...", and $11 the extra
-# ssh connections to other hosts as "host|ssh_user|jump|pid ...".
+# ssh connections to other hosts as "host|ssh_user|jump|pid ...", and $12
+# the native RDP forwards as "account@host=local_port:remote_port ...".
 # Requires python3; returns non-zero if unavailable or the fetch/parse
 # fails, in which case the caller should fall back to the raw page.
 # Problems with the sessions file are warnings, never failures.
@@ -288,8 +297,10 @@ render_dashboard() {
     command -v python3 >/dev/null 2>&1 || return 1
 
     python3 - "$base_url" "$out_file" "$password" "$sessions" "$default_host" \
-        "${6:-}" "${7:-}" "${8:-}" "${9:-}" "${10:-}" "${11:-}" <<'PY'
+        "${6:-}" "${7:-}" "${8:-}" "${9:-}" "${10:-}" "${11:-}" "${12:-}" <<'PY'
 import html
+import os
+import shlex
 import ssl
 import sys
 import urllib.request
@@ -297,7 +308,9 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, quote, urlparse
 
 (base_url, out_file, password, sessions_file, default_host,
- ssh_user, jump, remote_port, ssh_pid, native_spec, remote_spec) = (sys.argv[1:12] + [""] * 11)[:11]
+ ssh_user, jump, remote_port, ssh_pid, native_spec, remote_spec, rdp_spec) = (
+    sys.argv[1:13] + [""] * 12
+)[:12]
 portal_port = urlparse(base_url).port or ""
 portal_port = str(portal_port)
 
@@ -308,6 +321,14 @@ for item in native_spec.split():
     lport, _, disp = rest.partition(":")
     if "@" in key and lport.isdigit() and disp.isdigit():
         native[key] = (lport, disp)
+
+# "account@host=local_port:remote_port ..." -> {"account@host": (local_port, remote_port)}
+rdp = {}
+for item in rdp_spec.split():
+    key, _, rest = item.partition("=")
+    lport, _, rport = rest.partition(":")
+    if "@" in key and lport.isdigit() and rport.isdigit():
+        rdp[key] = (lport, rport)
 
 # "host|ssh_user|jump|pid ..." -> [(host, ssh_user, jump, pid)], one per extra ssh
 remotes = []
@@ -412,6 +433,24 @@ if not parser.links:
     sys.stderr.write("render_dashboard: no session links found\n")
     sys.exit(1)
 
+def write_rdp_file(name, host, lport, user):
+    """Write <account>@<host>.rdp beside the dashboard (removed with it when
+    the script exits). Returns its path, or "" if it cannot be written."""
+    path = os.path.join(os.path.dirname(os.path.abspath(out_file)), "%s@%s.rdp" % (name, host))
+    try:
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(
+                "full address:s:localhost:%s\r\n"
+                "username:s:%s\r\n"
+                "prompt for credentials:i:1\r\n"
+                "dynamic resolution:i:1\r\n" % (lport, user)
+            )
+    except OSError as exc:
+        warn("cannot write %s: %s" % (path, exc))
+        return ""
+    return path
+
+
 def make_card(name, host, href, entry):
     """One card. href is the portal link, or None for a session the
     portal does not serve (one on another host)."""
@@ -456,6 +495,44 @@ def make_card(name, host, href, entry):
             '<span class="muted">{r}</span></div>'
         ).format(r=reason)
 
+    # Native RDP: an rdp:// link (Windows App on macOS registers the scheme)
+    # and an .rdp file beside the dashboard, opened with "open <file>".
+    rdp_btn = ""
+    rdp_line = ""
+    rdp_forward = rdp.get("%s@%s" % (name, host))
+    wants_rdp = entry.get("rdp") not in (None, False, "")
+    if rdp_forward:
+        lport, rport = rdp_forward
+        rdp_user = str(entry.get("rdp_user") or name)
+        rdp_url = "rdp://full%%20address=s:localhost:%s&username=s:%s" % (lport, quote(rdp_user))
+        rdp_file = write_rdp_file(name, host, lport, rdp_user)
+        rdp_btn = (
+            '<a class="btn" href="{u}" title="Opens Windows App (Microsoft Remote Desktop)">'
+            "Native RDP</a>".format(u=html.escape(rdp_url))
+        )
+        rdp_line = (
+            '<div class="tun-row"><span class="tun-key">rdp</span>'
+            "<code>localhost:{lp}</code> &rarr; <code>{h}:{rp}</code>{via}</div>"
+            '<div class="tun-row"><span class="tun-key">open</span>'
+            '<code class="sel">open {f}</code></div>'
+        ).format(
+            lp=lport,
+            h=html.escape(host),
+            rp=html.escape(rport),
+            via=' <span class="muted">(own ssh to this host)</span>' if own_ssh else "",
+            f=html.escape(shlex.quote(rdp_file)) if rdp_file else "(no .rdp file)",
+        )
+    elif wants_rdp:
+        rdp_btn = '<span class="btn btn-off" title="not forwarded">Native RDP</span>'
+        rdp_line = (
+            '<div class="tun-row"><span class="tun-key">rdp</span>'
+            '<span class="muted">not forwarded</span></div>'
+        )
+    # A session reached by RDP but with no display has no VNC to offer.
+    if wants_rdp and display in (None, "") and not forward:
+        native_btn = ""
+        native_line = ""
+
     if link:
         head_open = '<a class="card-main" href="{u}" target="_blank" rel="noopener">'.format(
             u=html.escape(link)
@@ -487,13 +564,14 @@ def make_card(name, host, href, entry):
         '<div class="card-host">{where}</div>'
         '<div class="card-desc{empty}">{desc}</div>'
         "{head_close}"
-        '<div class="card-actions">{browser_btn}{native_btn}</div>'
+        '<div class="card-actions">{browser_btn}{native_btn}{rdp_btn}</div>'
         # <details> without "open": collapsed until clicked, no script needed.
         '<details class="card-tunnel">'
         "<summary>Tunnel details</summary>"
         '<div class="tun-body">'
         '<div class="tun-row"><span class="tun-key">noVNC</span>{portal_line}</div>'
         "{native_line}"
+        "{rdp_line}"
         "</div>"
         "</details>"
         "</div>"
@@ -506,8 +584,10 @@ def make_card(name, host, href, entry):
         desc=html.escape(description) if description else "no description configured",
         browser_btn=browser_btn,
         native_btn=native_btn,
+        rdp_btn=rdp_btn,
         portal_line=portal_line,
         native_line=native_line,
+        rdp_line=rdp_line,
     )
 
 
@@ -554,7 +634,10 @@ for label, cards in rendered:
 
 
 def forwards_for(host):
-    return [(lp, d) for key, (lp, d) in native.items() if key.rsplit("@", 1)[1] == host]
+    """[(local_port, remote_port)] for every native forward to host."""
+    vnc = [(lp, 5900 + int(d)) for key, (lp, d) in native.items() if key.rsplit("@", 1)[1] == host]
+    rdps = [(lp, int(rp)) for key, (lp, rp) in rdp.items() if key.rsplit("@", 1)[1] == host]
+    return vnc + rdps
 
 
 portal_forwards = forwards_for(default_host)
@@ -562,7 +645,7 @@ ssh_cmd = "ssh -N%s -L %s:localhost:%s%s %s@%s" % (
     " -J " + jump if jump else "",
     portal_port,
     remote_port,
-    "".join(" -L %s:localhost:%d" % (lp, 5900 + int(d)) for lp, d in portal_forwards),
+    "".join(" -L %s:localhost:%d" % (lp, rp) for lp, rp in portal_forwards),
     ssh_user,
     default_host,
 )
@@ -572,7 +655,7 @@ for rhost, ruser, rjump, rpid in remotes:
     fwd = forwards_for(rhost)
     cmd = "ssh -N%s%s %s%s" % (
         " -J " + rjump if rjump else "",
-        "".join(" -L %s:localhost:%d" % (lp, 5900 + int(d)) for lp, d in fwd),
+        "".join(" -L %s:localhost:%d" % (lp, rp) for lp, rp in fwd),
         (ruser + "@") if ruser else "",
         rhost,
     )
@@ -609,9 +692,9 @@ tunnel_panel = (
     pport=html.escape(portal_port),
     rport=html.escape(remote_port),
     nat=(
-        "%d session(s), one local port each%s"
-        % (len(native), "" if not remotes else ", across %d host(s)" % (len(remotes) + 1))
-        if native
+        "%d VNC and %d RDP forward(s), one local port each%s"
+        % (len(native), len(rdp), "" if not remotes else ", across %d host(s)" % (len(remotes) + 1))
+        if native or rdp
         else '<span class="muted">none (no displays in the sessions file, or --no-native)</span>'
     ),
     cmd=html.escape(ssh_cmd),
@@ -734,19 +817,26 @@ url="https://localhost:$local_port"
 
 # Native VNC forwards. Those to the tunnel host ride on the portal ssh;
 # each other host gets an ssh of its own (Xvnc listens on its own host's
-# loopback only). native_map is "account@host=local_port:display ..." for
-# the renderer; remote_hosts lists the other hosts.
+# loopback only). For the renderer, native_map is
+# "account@host=local_port:display ..." (VNC) and rdp_map is
+# "account@host=local_port:remote_port ..." (RDP); remote_hosts lists the
+# other hosts.
 native_opts=()
 native_map=""
+rdp_map=""
 native_plan=""
 remote_hosts=""
 if [ "$native" != "0" ] && [ -n "$sessions_file" ]; then
     native_plan=$(plan_native_forwards "$sessions_file" "$host" "$local_port")
-    while read -r n_account n_host n_display n_port n_user n_jump; do
+    while read -r n_kind n_account n_host n_rport n_port n_user n_jump; do
         [ -n "$n_account" ] || continue
-        native_map="$native_map $n_account@$n_host=$n_port:$n_display"
+        case "$n_kind" in
+            vnc) native_map="$native_map $n_account@$n_host=$n_port:$((n_rport - 5900))";;
+            rdp) rdp_map="$rdp_map $n_account@$n_host=$n_port:$n_rport";;
+            *) continue;;
+        esac
         if [ "$n_host" = "$host" ]; then
-            native_opts+=(-L "$n_port:localhost:$((5900 + n_display))")
+            native_opts+=(-L "$n_port:localhost:$n_rport")
         else
             case " $remote_hosts " in
                 *" $n_host "*) ;;
@@ -761,14 +851,14 @@ fi
 # (empty: ssh's own configuration decides), and r_count to the number of
 # forwards.
 remote_ssh_args() {
-    local rh="$1" a h d p u j
+    local rh="$1" k a h rp p u j
     r_args=(-N -o ExitOnForwardFailure=yes)
     r_user=""
     r_jump=""
     r_count=0
-    while read -r a h d p u j; do
+    while read -r k a h rp p u j; do
         [ "$h" = "$rh" ] || continue
-        r_args+=(-L "$p:localhost:$((5900 + d))")
+        r_args+=(-L "$p:localhost:$rp")
         r_count=$((r_count + 1))
         [ "$u" != "-" ] && r_user="$u"
         [ "$j" != "-" ] && r_jump="$j"
@@ -789,11 +879,15 @@ if [ "$dry_run" -eq 1 ]; then
         n_key=${entry%%=*}; n_port=${entry#*=}; n_port=${n_port%%:*}
         echo "native $n_key -> vnc://localhost:$n_port (${n_key#*@}:$((5900 + ${entry##*:})))"
     done
+    for entry in $rdp_map; do
+        n_key=${entry%%=*}; n_port=${entry#*=}; n_port=${n_port%%:*}
+        echo "rdp $n_key -> rdp://localhost:$n_port (${n_key#*@}:${entry##*:})"
+    done
     exit 0
 fi
 
 echo "Opening SSH tunnel: localhost:$local_port -> $user@$host:$remote_port${proxy_jump:+ (via $proxy_jump)}"
-[ "${#native_opts[@]}" -gt 0 ] && echo "  plus $(( ${#native_opts[@]} / 2 )) native VNC forward(s) to $host:59xx"
+[ "${#native_opts[@]}" -gt 0 ] && echo "  plus $(( ${#native_opts[@]} / 2 )) native forward(s) to $host"
 ssh -N -o ExitOnForwardFailure=yes ${jump_opts[@]:+"${jump_opts[@]}"} \
     -L "$local_port:localhost:$remote_port" ${native_opts[@]+"${native_opts[@]}"} "$user@$host" &
 ssh_pid=$!
@@ -804,7 +898,7 @@ remote_pids=""
 remote_spec=""
 for rh in $remote_hosts; do
     remote_ssh_args "$rh"
-    echo "Opening SSH tunnel to $rh for $r_count native VNC forward(s)${r_jump:+ (via $r_jump)}"
+    echo "Opening SSH tunnel to $rh for $r_count native forward(s)${r_jump:+ (via $r_jump)}"
     ssh "${r_args[@]}" &
     remote_pids="$remote_pids $!"
     remote_spec="$remote_spec $rh|$r_user|$r_jump|$!"
@@ -860,7 +954,7 @@ if [ -n "$dashboard_dir" ]; then
     for _ in $(seq 1 15); do
         if render_dashboard "$url" "$dashboard_file" "$password" "$sessions_file" "$host" \
                 "$user" "$proxy_jump" "$remote_port" "$ssh_pid" "$native_map" \
-                "$remote_spec" 2>"$dashboard_dir/render.err"; then
+                "$remote_spec" "$rdp_map" 2>"$dashboard_dir/render.err"; then
             built=1
             break
         fi

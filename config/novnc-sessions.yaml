@@ -26,6 +26,10 @@
 #   ssh_user     login for the ssh to another host (default: your ssh
 #                config; ~/.ssh/config_mu2e logs mu2e-mc1-cr-* in as mu2eshift)
 #   jump         ProxyJump for that ssh (default: your ssh config)
+#   rdp          true (port 3389) or a port number: the session is also
+#                reached by RDP. The card gets a Native RDP button that
+#                opens Windows App through a forwarded local port
+#   rdp_user     username Windows App fills in (default: account)
 #
 # Reading this file needs PyYAML in the python3 on your PATH
 # (python3 -m pip install --user pyyaml). Without it the dashboard still
@@ -85,23 +89,27 @@ groups:
         description: Control-room screen 6 (1920x2160).
 
   - label: MC-1 Control Room
-    # No VNC server runs on these four yet (surveyed 2026-10-29: AlmaLinux
-    # 10.2, Puppet-managed, tigervnc-server not installed). Add
-    # "display: N" to each once vncserver@:N runs for mu2eshift; that
-    # alone turns on its native VNC link.
+    # No VNC on these four (AlmaLinux 10.2: no tigervnc-server). Each runs
+    # a headless GNOME session for mu2eshift (gnome-headless-session@mu2eshift)
+    # with gnome-remote-desktop serving RDP on 3389, set up 2026-10-29; the
+    # RDP username and password are gnome-remote-desktop's own.
     sessions:
       - account: mu2eshift
         host: mu2e-mc1-cr-01.fnal.gov
+        rdp: true
         description: MC-1 control room console 1, shift account.
 
       - account: mu2eshift
         host: mu2e-mc1-cr-02.fnal.gov
+        rdp: true
         description: MC-1 control room console 2, shift account.
 
       - account: mu2eshift
         host: mu2e-mc1-cr-03.fnal.gov
+        rdp: true
         description: MC-1 control room console 3, shift account.
 
       - account: mu2eshift
         host: mu2e-mc1-cr-04.fnal.gov
+        rdp: true
         description: MC-1 control room console 4, shift account.
