@@ -287,6 +287,18 @@ def test_cards_offer_native_vnc_and_show_their_tunnel(tmp_path):
     assert page.count("Browser (noVNC)") == 4
 
 
+def test_card_tunnel_details_are_collapsible_and_start_collapsed(tmp_path):
+    result, page = render(tmp_path, native="mu2eshift=61002:2")
+    assert result.returncode == 0, result.stderr.decode()
+    sections = re.findall(r'<details class="card-tunnel"([^>]*)>', page)
+    assert len(sections) == 4, "one collapsible tunnel section per card"
+    assert all("open" not in attrs for attrs in sections), "must start collapsed"
+    assert page.count("<summary>Tunnel details</summary>") == 4
+    # The native forward lives inside the collapsed section.
+    body = page[page.index('<details class="card-tunnel"') :]
+    assert "open vnc://localhost:61002" in body
+
+
 def test_a_malformed_native_map_is_ignored(tmp_path):
     result, page = render(tmp_path, native="mu2eshift=notaport:2 =1:2 mu2edcs=61001:x")
     assert result.returncode == 0

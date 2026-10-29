@@ -425,11 +425,15 @@ for name, href, entry in ordered:
         '<a class="btn" href="{url}" target="_blank" rel="noopener">Browser (noVNC)</a>'
         "{native_btn}"
         "</div>"
-        '<div class="card-tunnel">'
+        # <details> without "open": collapsed until clicked, no script needed.
+        '<details class="card-tunnel">'
+        "<summary>Tunnel details</summary>"
+        '<div class="tun-body">'
         '<div class="tun-row"><span class="tun-key">noVNC</span>'
         "<code>localhost:{pport}</code> &rarr; <code>{thost}:{rport}</code></div>"
         "{native_line}"
         "</div>"
+        "</details>"
         "</div>".format(
             url=html.escape(link),
             name=html.escape(name),
@@ -538,7 +542,11 @@ page = """<!DOCTYPE html>
   .btn:hover {{ background: var(--accent); color: var(--bg); }}
   .btn-off {{ border-color: var(--muted); color: var(--muted); opacity: 0.6; cursor: not-allowed; }}
   .btn-off:hover {{ background: transparent; color: var(--muted); }}
-  .card-tunnel {{ border-top: 1px solid var(--card-hover); padding-top: 0.6rem; font-size: 0.75rem; display: grid; gap: 0.25rem; }}
+  .card-tunnel {{ border-top: 1px solid var(--card-hover); padding-top: 0.5rem; font-size: 0.75rem; }}
+  .card-tunnel > summary {{ cursor: pointer; color: var(--muted); font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }}
+  .card-tunnel > summary:hover, .card-tunnel[open] > summary {{ color: var(--accent); }}
+  .card-tunnel > summary:focus-visible {{ outline: 1px solid var(--accent); outline-offset: 2px; }}
+  .tun-body {{ display: grid; gap: 0.25rem; margin-top: 0.5rem; }}
   .tun-row {{ display: flex; gap: 0.4rem; align-items: baseline; flex-wrap: wrap; min-width: 0; }}
   .tun-key {{ color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.65rem; min-width: 3.6rem; }}
   code {{ font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.75rem; word-break: break-all; }}
