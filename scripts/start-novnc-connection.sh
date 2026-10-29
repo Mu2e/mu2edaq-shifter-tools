@@ -504,7 +504,14 @@ def make_card(name, host, href, entry):
     if rdp_forward:
         lport, rport = rdp_forward
         rdp_user = str(entry.get("rdp_user") or name)
-        rdp_url = "rdp://full%%20address=s:localhost:%s&username=s:%s" % (lport, quote(rdp_user))
+        # Each field is "name=type:value". The ':' and ' ' inside must be
+        # percent-encoded: "rdp://full%20address=s:localhost:N..." is not a
+        # valid URL (macOS and browsers read "s:localhost:N" as host:port and
+        # reject it), so the button would do nothing.
+        rdp_url = "rdp://" + "&".join(
+            quote(field, safe="=")
+            for field in ("full address=s:localhost:%s" % lport, "username=s:%s" % rdp_user)
+        )
         rdp_file = write_rdp_file(name, host, lport, rdp_user)
         rdp_btn = (
             '<a class="btn" href="{u}" title="Opens Windows App (Microsoft Remote Desktop)">'
