@@ -555,7 +555,7 @@ def test_cards_offer_native_rdp_with_link_and_rdp_file(tmp_path):
     assert result.returncode == 0, result.stderr.decode()
     first, second = mc1_cards(page)
     assert (
-        'href="rdp://full%20address=s:localhost:63389&amp;username=s:mu2eshift"'
+        'href="rdp://full%20address=s%3Alocalhost%3A63389&amp;username=s%3Amu2eshift"'
         in first
     )
     assert ">Native RDP</a>" in first
@@ -566,7 +566,7 @@ def test_cards_offer_native_rdp_with_link_and_rdp_file(tmp_path):
     # No display and RDP configured: no Native VNC button at all.
     assert "Native VNC" not in first
     # rdp_user is what Windows App fills in.
-    assert "username=s:ops" in second
+    assert "username=s%3Aops" in second
     # The .rdp file sits beside the dashboard and the card says how to open it.
     rdp_file = tmp_path / "mu2eshift@mu2e-mc1-cr-01.fnal.gov.rdp"
     text = rdp_file.read_text()
@@ -614,3 +614,27 @@ def test_dry_run_forwards_rdp_through_the_hosts_own_ssh(tmp_path):
         out,
         re.M,
     ), out
+
+
+def test_rdp_button_link_is_a_valid_url(tmp_path):
+    # The unencoded form, rdp://full%20address=s:localhost:N, is rejected by
+    # URL parsers (its authority "...=s:localhost:N" has no valid port), so
+    # macOS never handed it to Windows App and the button did nothing.
+    from urllib.parse import unquote, urlsplit
+
+    result, page = render(
+        tmp_path,
+        write_sessions(tmp_path, RDP_GROUPS),
+        rdp="mu2eshift@mu2e-mc1-cr-01.fnal.gov=63389:3389",
+        remotes="mu2e-mc1-cr-01.fnal.gov|||11",
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    link = html_unescape(re.search(r'href="(rdp://[^"]+)"', page).group(1))
+    parts = urlsplit(link)
+    assert parts.scheme == "rdp"
+    parts.port  # raises ValueError on an invalid port, as the old form did
+    assert ":" not in parts.netloc, "':' in the authority makes it host:port"
+    assert unquote(parts.netloc).split("&") == [
+        "full address=s:localhost:63389",
+        "username=s:mu2eshift",
+    ]
