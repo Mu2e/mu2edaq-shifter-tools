@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from html import unescape as html_unescape
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "start-novnc-connection.sh"
@@ -46,6 +47,7 @@ def render(
     tunnel=("", "", "", ""),
     native="",
     remotes="",
+    rdp="",
 ):
     """tunnel is (ssh user, jump host, remote port, ssh pid); native is the
     "account@host=local_port:display ..." map the script passes, and
@@ -56,7 +58,7 @@ def render(
     result = subprocess.run(
         [sys.executable, "-", portal.as_uri(), str(out), password, str(sessions), host]
         + list(tunnel)
-        + [native, remotes],
+        + [native, remotes, rdp],
         input=renderer_source().encode(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -188,6 +190,7 @@ def test_shipped_sessions_file_is_well_formed():
         "mu2e-mc1-cr-0%d.fnal.gov" % n for n in (1, 2, 3, 4)
     ]
     assert {e["account"] for e in mc1} == {"mu2eshift"}
+    assert all(e.get("rdp") is True for e in mc1)
     assert [e["account"] for e in data["groups"][0]["sessions"]] == [
         "mu2eshift",
         "mu2edcs",
@@ -273,13 +276,13 @@ sessions:
     )
     result, rows = plan(sessions)
     assert result.returncode == 0, result.stderr.decode()
-    # account, host, display, port, ssh_user, jump
-    assert [(r[0], r[1], r[2], r[4], r[5]) for r in rows] == [
-        ("mu2eshift", "mu2e-mgr-01.fnal.gov", "2", "-", "-"),
-        ("mu2edcs", "mu2e-mgr-01.fnal.gov", "1", "-", "-"),
-        ("elsewhere", "other.fnal.gov", "4", "me", "gw.fnal.gov"),
+    # kind, account, host, remote port, local port, ssh_user, jump
+    assert [(r[0], r[1], r[2], r[3], r[5], r[6]) for r in rows] == [
+        ("vnc", "mu2eshift", "mu2e-mgr-01.fnal.gov", "5902", "-", "-"),
+        ("vnc", "mu2edcs", "mu2e-mgr-01.fnal.gov", "5901", "-", "-"),
+        ("vnc", "elsewhere", "other.fnal.gov", "5904", "me", "gw.fnal.gov"),
     ]
-    ports = [r[3] for r in rows]
+    ports = [r[4] for r in rows]
     assert all(p.isdigit() for p in ports) and len(set(ports)) == len(ports)
 
 
@@ -499,3 +502,115 @@ groups:
         lines[2],
     ), lines[2]
     assert "native a@far.fnal.gov -> vnc://localhost:" in out
+
+
+def test_rdp_forwards_are_planned(tmp_path):
+    sessions = write_sessions(
+        tmp_path,
+        """
+groups:
+  - sessions:
+      - {account: mu2eshift, host: cr-01.fnal.gov, rdp: true}
+      - {account: mu2eshift, host: cr-02.fnal.gov, rdp: 3390, ssh_user: mu2eshift}
+      - {account: both, display: 2, rdp: true}
+      - {account: off, host: cr-03.fnal.gov, rdp: false}
+      - {account: bad, host: cr-04.fnal.gov, rdp: "yes"}
+""",
+    )
+    result, rows = plan(sessions)
+    assert result.returncode == 0, result.stderr.decode()
+    assert [(r[0], r[1], r[2], r[3], r[5]) for r in rows] == [
+        ("rdp", "mu2eshift", "cr-01.fnal.gov", "3389", "-"),
+        ("rdp", "mu2eshift", "cr-02.fnal.gov", "3390", "mu2eshift"),
+        ("vnc", "both", "mu2e-mgr-01.fnal.gov", "5902", "-"),
+        ("rdp", "both", "mu2e-mgr-01.fnal.gov", "3389", "-"),
+    ]
+    ports = [r[4] for r in rows]
+    assert len(set(ports)) == len(ports)
+
+
+RDP_GROUPS = """
+groups:
+  - label: MC-1 Control Room
+    sessions:
+      - {account: mu2eshift, host: mu2e-mc1-cr-01.fnal.gov, rdp: true, description: Console 1.}
+      - {account: mu2eshift, host: mu2e-mc1-cr-02.fnal.gov, rdp: true, rdp_user: ops}
+"""
+
+
+def mc1_cards(page):
+    """The cards of the MC-1 group, in order."""
+    section = page[page.index('<h2 class="group-label">MC-1 Control Room</h2>') :]
+    section = section[: section.index("</section>")]
+    return section.split('<div class="card">')[1:]
+
+
+def test_cards_offer_native_rdp_with_link_and_rdp_file(tmp_path):
+    result, page = render(
+        tmp_path,
+        write_sessions(tmp_path, RDP_GROUPS),
+        rdp="mu2eshift@mu2e-mc1-cr-01.fnal.gov=63389:3389 mu2eshift@mu2e-mc1-cr-02.fnal.gov=63390:3389",
+        remotes="mu2e-mc1-cr-01.fnal.gov|||11 mu2e-mc1-cr-02.fnal.gov|||12",
+    )
+    assert result.returncode == 0, result.stderr.decode()
+    first, second = mc1_cards(page)
+    assert (
+        'href="rdp://full%20address=s:localhost:63389&amp;username=s:mu2eshift"'
+        in first
+    )
+    assert ">Native RDP</a>" in first
+    assert (
+        "<code>localhost:63389</code> &rarr; <code>mu2e-mc1-cr-01.fnal.gov:3389</code>"
+        in first
+    )
+    # No display and RDP configured: no Native VNC button at all.
+    assert "Native VNC" not in first
+    # rdp_user is what Windows App fills in.
+    assert "username=s:ops" in second
+    # The .rdp file sits beside the dashboard and the card says how to open it.
+    rdp_file = tmp_path / "mu2eshift@mu2e-mc1-cr-01.fnal.gov.rdp"
+    text = rdp_file.read_text()
+    assert "full address:s:localhost:63389" in text and "username:s:mu2eshift" in text
+    assert "open " + str(rdp_file) in html_unescape(first)
+    # The tunnel panel counts the RDP forwards and puts them in each host's command.
+    assert "0 VNC and 2 RDP forward(s)" in page
+    assert "ssh -N -L 63389:localhost:3389 mu2e-mc1-cr-01.fnal.gov" in page
+
+
+def test_rdp_configured_but_not_forwarded_is_a_disabled_button(tmp_path):
+    result, page = render(tmp_path, write_sessions(tmp_path, RDP_GROUPS))
+    assert result.returncode == 0, result.stderr.decode()
+    for card in mc1_cards(page):
+        assert (
+            '<span class="btn btn-off" title="not forwarded">Native RDP</span>' in card
+        )
+        assert "rdp://" not in card
+
+
+def test_dry_run_forwards_rdp_through_the_hosts_own_ssh(tmp_path):
+    env = {
+        k: v for k, v in os.environ.items() if not k.startswith(("MU2EDAQ_", "NOVNC_"))
+    }
+    env["HOME"] = str(tmp_path)
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+    sessions = write_sessions(tmp_path, RDP_GROUPS)
+    result = subprocess.run(
+        [str(SCRIPT), "-n", "-p", "45000", "-c", str(sessions)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=env,
+        cwd=str(tmp_path),
+    )
+    out = result.stdout.decode()
+    assert result.returncode == 0, out
+    assert re.search(
+        r"^ssh -N -o ExitOnForwardFailure=yes -L \d+:localhost:3389 mu2e-mc1-cr-01\.fnal\.gov$",
+        out,
+        re.M,
+    ), out
+    assert re.search(
+        r"^rdp mu2eshift@mu2e-mc1-cr-01\.fnal\.gov -> rdp://localhost:\d+ "
+        r"\(mu2e-mc1-cr-01\.fnal\.gov:3389\)$",
+        out,
+        re.M,
+    ), out

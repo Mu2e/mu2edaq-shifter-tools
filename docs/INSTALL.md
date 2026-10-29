@@ -172,6 +172,15 @@ such as the MC-1 control room consoles, gets a card with no browser
 link and, once it has a `display`, a native link through its own ssh
 to that host.
 
+A session marked `rdp: true` (the MC-1 consoles, which serve a headless
+GNOME session over RDP) gets a **Native RDP** button. It opens Windows App
+(Microsoft's free RDP client, App Store) with
+`rdp://full%20address=s:localhost:<port>&username=s:<user>`, through a
+forward of a free local port to the host's port 3389. Each card's tunnel
+details also give `open <session>.rdp` for a generated `.rdp` file. Windows
+App asks for the RDP password, which is gnome-remote-desktop's own, not
+the account's.
+
 ## 1. Remote side: account install on a DAQ host
 
 > **Run on: the DAQ host, logged in as the shared account being set up**

@@ -71,6 +71,19 @@ native forward. Default: whatever your ssh configuration says
 .B jump
 For a session on another host: ProxyJump host for that ssh. Default:
 your ssh configuration.
+.TP
+.B rdp
+\fBtrue\fR (port 3389) or a port number: the session is also reached by
+RDP, for example a headless GNOME session served by
+gnome\-remote\-desktop. A local port is forwarded to that port, and the
+card gets a \fBNative RDP\fR button: an
+\fBrdp://full%20address=s:localhost:\fIport\fB&username=s:\fIuser\fR
+link, which Windows App (Microsoft Remote Desktop) opens on macOS, plus an
+\fI.rdp\fR file beside the dashboard for \fBopen\fR(1). A session with
+\fBrdp\fR and no \fBdisplay\fR shows no Native VNC button.
+.TP
+.B rdp_user
+Username placed in the RDP link and file. Default: \fBaccount\fR.
 .PP
 Other keys are ignored.
 .SH REQUIREMENTS
@@ -110,7 +123,7 @@ groups:
     sessions:
       \- account: mu2eshift
         host: mu2e\-mc1\-cr\-01.fnal.gov
-        display: 2
+        rdp: true
         description: MC\-1 control room console 1.
 .fi
 .RE

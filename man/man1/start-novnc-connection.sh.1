@@ -52,7 +52,14 @@ Screen Sharing, and shows the forward and the equivalent
 session's VNC password itself. A session whose host differs from the
 session on another host gets its native forward through a separate ssh
 to that host, because Xvnc listens only on its own host's loopback; the
-tunnel panel lists each such ssh with its pid and command. Cards are
+tunnel panel lists each such ssh with its pid and command.
+.PP
+A session with \fBrdp\fR in the sessions file gets a forward of a free
+local port to its RDP port (3389 by default) on the same ssh, and its card
+a \fBNative RDP\fR button: an \fBrdp://\fR link that Windows App opens
+on macOS. Beside the dashboard an \fI.rdp\fR file is written for each
+such session; the card shows the \fBopen\fR command for it, which works
+even where the browser does not hand \fBrdp://\fR links on. Cards are
 arranged in the labeled groups of
 .BR novnc-sessions.yaml (5),
 with a separator between groups.
