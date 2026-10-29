@@ -48,19 +48,18 @@ groups:
       - account: mu2eshift
         display: 2
         description: >-
-          Shift crew main desktop (3840x2160). Run-time monitors such as the
-          discovery browser and the diskwatcher dashboard live here.
+          Main DAQ Desktop for OTSDAQ and ArtDAQ (3840x2160)
 
       - account: mu2edcs
         display: 1
         description: >-
-          Detector Control System (DCS) desktop for slow controls
+          Detector Control System desktop for slow controls and Epics
           (1280x720, resizable).
 
       - account: mu2etrig
         display: 3
         description: >-
-          Trigger desktop (1280x720, resizable).
+          Trigger Configuration desktop (1280x720, resizable).
 
   - label: mu2e-mgr-01 Control-Room Screens
     sessions:
