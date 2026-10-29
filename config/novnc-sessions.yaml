@@ -58,6 +58,8 @@ groups:
         description: >-
           Trigger desktop (1280x720, resizable).
 
+  - label: mu2e-mgr-01 Control-Room Screens
+    sessions:
       - account: mu2ecr01
         display: 4
         description: Control-room screen 1 (1920x2160).

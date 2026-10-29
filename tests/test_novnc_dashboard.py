@@ -167,7 +167,11 @@ def test_password_links_still_autoconnect(tmp_path):
 def test_shipped_sessions_file_is_well_formed():
     data = yaml.safe_load(SHIPPED.read_text())
     labels = [group["label"] for group in data["groups"]]
-    assert labels == ["mu2e-mgr-01 (MC-2)", "MC-1 Control Room"]
+    assert labels == [
+        "mu2e-mgr-01 (MC-2)",
+        "mu2e-mgr-01 Control-Room Screens",
+        "MC-1 Control Room",
+    ]
     keys = [
         (entry["account"], entry.get("host", ""))
         for g in data["groups"]
@@ -179,11 +183,18 @@ def test_shipped_sessions_file_is_well_formed():
             assert entry.get("description"), f"{entry['account']} has no description"
             if "host" not in entry:  # a portal session: needs its display
                 assert isinstance(entry.get("display"), int)
-    mc1 = data["groups"][1]["sessions"]
+    mc1 = data["groups"][2]["sessions"]
     assert [e["host"] for e in mc1] == [
         "mu2e-mc1-cr-0%d.fnal.gov" % n for n in (1, 2, 3, 4)
     ]
     assert {e["account"] for e in mc1} == {"mu2eshift"}
+    assert [e["account"] for e in data["groups"][0]["sessions"]] == [
+        "mu2eshift",
+        "mu2edcs",
+        "mu2etrig",
+    ]
+    screens = [e["account"] for e in data["groups"][1]["sessions"]]
+    assert screens == ["mu2ecr0%d" % n for n in range(1, 7)]
 
 
 def test_dry_run_names_the_sessions_file_and_rejects_a_missing_one(tmp_path):
