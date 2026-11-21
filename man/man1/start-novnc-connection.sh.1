@@ -11,6 +11,8 @@ start-novnc-connection.sh \- open a tunnel to the noVNC manager and browse a ses
 [\fB\-P\fR \fIpassword_file\fR]
 [\fB\-c\fR \fIsessions_file\fR]
 [\fB\-\-no\-native\fR]
+[\fB\-\-view\-only\fR]
+[\fB\-\-no\-view\-only\fR]
 [\fB\-n\fR]
 [\fB\-h\fR]
 .SH DESCRIPTION
@@ -123,6 +125,13 @@ Default: \fBnovnc-sessions.yaml\fR on the toolkit's config search path
 Do not add the native VNC forwards; cards show no native link.
 Environment: \fBNOVNC_NATIVE\fR=\fB0\fR.
 .TP
+.BR \-\-view\-only ", " \-\-no\-view\-only
+Open the browser (noVNC) sessions view-only, or allow interacting with
+them. View-only is the default, matching the native viewer links, so a
+remote shifter cannot move the mouse or type on the shared desktop by
+accident. Environment: \fBNOVNC_VIEW_ONLY\fR (\fB1\fR view-only, \fB0\fR
+control).
+.TP
 .BR \-n ", " \-\-dry\-run
 Print the ssh command (with every forward), target URL, sessions file
 and native links that would be used, and exit
@@ -139,7 +148,7 @@ on Linux, or
 .BR open (1)
 on macOS.
 .TP
-.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE ", " NOVNC_SESSIONS_FILE ", " NOVNC_NATIVE
+.B NOVNC_HOST ", " NOVNC_USER ", " NOVNC_PROXY_JUMP ", " NOVNC_LOCAL_PORT ", " NOVNC_REMOTE_PORT ", " NOVNC_PASSWORD_FILE ", " NOVNC_SESSIONS_FILE ", " NOVNC_NATIVE ", " NOVNC_VIEW_ONLY
 See OPTIONS above.
 .SH FILES
 .TP

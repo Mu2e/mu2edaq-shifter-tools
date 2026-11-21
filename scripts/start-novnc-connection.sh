@@ -49,6 +49,8 @@
 #                            and card order         default novnc-sessions.yaml
 #                                                   on the config search path)
 #       --no-native         no native VNC forwards (env NOVNC_NATIVE=0)
+#       --view-only         browser noVNC sessions open view-only (default;
+#       --no-view-only      env NOVNC_VIEW_ONLY, default 1; 0 allows control)
 #   -n, --dry-run           print what would happen, do nothing
 #   -h, --help              show this help and exit
 #
@@ -80,10 +82,11 @@ remote_port="${NOVNC_REMOTE_PORT:-443}"
 password_file="${NOVNC_PASSWORD_FILE:-$HOME/.novnc_password}"
 sessions_file="${NOVNC_SESSIONS_FILE:-}"
 native="${NOVNC_NATIVE:-1}"
+view_only="${NOVNC_VIEW_ONLY:-1}"
 dry_run=0
 
 USAGE="\
-usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-c sessions_file] [--no-native] [-n]
+usage: $(basename "$0") [-H host] [-u user] [-J proxy_jump] [-p local_port] [-r remote_port] [-P password_file] [-c sessions_file] [--no-native] [--view-only] [--no-view-only] [-n]
 
 Open an SSH tunnel to port $remote_port on the remote host and launch a
 browser pointed at the local end of the tunnel.
@@ -103,6 +106,9 @@ browser pointed at the local end of the tunnel.
                            path; ignored if absent; needs PyYAML)
       --no-native          do not forward each session's VNC port for the
                            native viewer links
+      --view-only          open browser (noVNC) sessions view-only (default)
+      --no-view-only       allow interacting with browser (noVNC) sessions
+                           (env NOVNC_VIEW_ONLY=0)
   -n, --dry-run            show what would be done, change nothing
   -h, --help               show this help and exit
 "
@@ -117,6 +123,8 @@ while [ -n "${1:-}" ]; do
         -P|--password-file) shift; password_file="${1:-}";;
         -c|--sessions)      shift; sessions_file="${1:-}";;
         --no-native)        native=0;;
+        --view-only)        view_only=1;;
+        --no-view-only)     view_only=0;;
         -n|--dry-run)       dry_run=1;;
         -h|--help)          echo "$USAGE"; exit 0;;
         *) echo "Unknown option: $1" >&2; echo "$USAGE" >&2; exit 1;;
@@ -297,7 +305,7 @@ render_dashboard() {
     command -v python3 >/dev/null 2>&1 || return 1
 
     python3 - "$base_url" "$out_file" "$password" "$sessions" "$default_host" \
-        "${6:-}" "${7:-}" "${8:-}" "${9:-}" "${10:-}" "${11:-}" "${12:-}" <<'PY'
+        "${6:-}" "${7:-}" "${8:-}" "${9:-}" "${10:-}" "${11:-}" "${12:-}" "${13:-}" <<'PY'
 import html
 import os
 import shlex
@@ -305,12 +313,13 @@ import ssl
 import sys
 import urllib.request
 from html.parser import HTMLParser
-from urllib.parse import urljoin, quote, urlparse
+from urllib.parse import urljoin, quote, urlparse, urlsplit, urlunsplit
 
 (base_url, out_file, password, sessions_file, default_host,
- ssh_user, jump, remote_port, ssh_pid, native_spec, remote_spec, rdp_spec) = (
-    sys.argv[1:13] + [""] * 12
-)[:12]
+ ssh_user, jump, remote_port, ssh_pid, native_spec, remote_spec, rdp_spec,
+ view_only_spec) = (
+    sys.argv[1:14] + [""] * 13
+)[:13]
 portal_port = urlparse(base_url).port or ""
 portal_port = str(portal_port)
 
@@ -451,15 +460,43 @@ def write_rdp_file(name, host, lport, user):
     return path
 
 
+def add_params(url, params):
+    """Append already-encoded key=value params to the part noVNC reads its
+    settings from: the fragment when the URL has one (noVNC gives a
+    "#..." fragment precedence over the query string), otherwise the query.
+    Appending to the whole URL string instead would land the params in the
+    wrong component -- after a fragment they become part of the last value,
+    e.g. turning a fragment "password=demo" into "password=demo&view_only=..."
+    read as the password itself."""
+    if not params:
+        return url
+    parts = urlsplit(url)
+    extra = "&".join(params)
+    if parts.fragment:
+        return urlunsplit(parts._replace(fragment=parts.fragment + "&" + extra))
+    query = parts.query + "&" + extra if parts.query else extra
+    return urlunsplit(parts._replace(query=query))
+
+
 def make_card(name, host, href, entry):
     """One card. href is the portal link, or None for a session the
     portal does not serve (one on another host)."""
     link = None
     if href is not None:
         link = urljoin(base_url, href)
+        params = []
         if password:
-            sep = "&" if "?" in link else "?"
-            link = f"{link}{sep}password={quote(password, safe='')}&autoconnect=true"
+            params.append("password=" + quote(password, safe=""))
+            params.append("autoconnect=true")
+        if view_only_spec == "1":
+            params.append("view_only=true")
+        elif view_only_spec == "0":
+            # Emit an explicit false, not nothing: noVNC falls back to the
+            # viewer's saved setting when the parameter is absent, so a bare
+            # omission would not re-enable control for a viewer that had
+            # view-only saved from before.
+            params.append("view_only=false")
+        link = add_params(link, params)
     display = entry.get("display")
     forward = native.get("%s@%s" % (name, host))
     if forward and display in (None, ""):
@@ -881,6 +918,7 @@ if [ "$dry_run" -eq 1 ]; then
         echo "ssh ${r_args[*]}"
     done
     echo "browser -> $url"
+    echo "view-only -> $([ "$view_only" = 1 ] && echo on || echo off)"
     echo "sessions -> ${sessions_file:-none (portal order, no descriptions)}"
     for entry in $native_map; do
         n_key=${entry%%=*}; n_port=${entry#*=}; n_port=${n_port%%:*}
@@ -961,7 +999,7 @@ if [ -n "$dashboard_dir" ]; then
     for _ in $(seq 1 15); do
         if render_dashboard "$url" "$dashboard_file" "$password" "$sessions_file" "$host" \
                 "$user" "$proxy_jump" "$remote_port" "$ssh_pid" "$native_map" \
-                "$remote_spec" "$rdp_map" 2>"$dashboard_dir/render.err"; then
+                "$remote_spec" "$rdp_map" "$view_only" 2>"$dashboard_dir/render.err"; then
             built=1
             break
         fi
