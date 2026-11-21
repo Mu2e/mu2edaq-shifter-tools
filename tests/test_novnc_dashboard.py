@@ -48,17 +48,19 @@ def render(
     native="",
     remotes="",
     rdp="",
+    view_only="",
+    portal_html=None,
 ):
     """tunnel is (ssh user, jump host, remote port, ssh pid); native is the
     "account@host=local_port:display ..." map the script passes, and
     remotes its "host|ssh_user|jump|pid ..." list of extra ssh connections."""
     portal = tmp_path / "portal.html"
-    portal.write_text(PORTAL)
+    portal.write_text(portal_html or PORTAL)
     out = tmp_path / "dashboard.html"
     result = subprocess.run(
         [sys.executable, "-", portal.as_uri(), str(out), password, str(sessions), host]
         + list(tunnel)
-        + [native, remotes, rdp],
+        + [native, remotes, rdp, view_only],
         input=renderer_source().encode(),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -164,6 +166,58 @@ def test_password_links_still_autoconnect(tmp_path):
     result, page = render(tmp_path, password="s3cret&x")
     assert result.returncode == 0
     assert "password=s3cret%26x&amp;autoconnect=true" in page
+
+
+def test_browser_links_are_view_only_when_enabled(tmp_path):
+    result, page = render(tmp_path, view_only="1")
+    assert result.returncode == 0, result.stderr.decode()
+    # noVNC's view_only setting rides on every browser link, even with no password.
+    assert "view_only=true" in page
+    assert "view_only=false" not in page
+    assert page.count("Browser (noVNC)") == 4
+
+
+def test_opt_out_sets_view_only_false_explicitly(tmp_path):
+    # Not just "omit the param": noVNC falls back to the viewer's saved
+    # setting when it is absent, so the opt-out must force false to re-enable
+    # control for a viewer that had view-only saved.
+    result, page = render(tmp_path, view_only="0")
+    assert result.returncode == 0, result.stderr.decode()
+    assert "view_only=false" in page
+    assert "view_only=true" not in page
+
+
+def test_unspecified_view_only_adds_no_param(tmp_path):
+    result, page = render(tmp_path, view_only="")
+    assert result.returncode == 0, result.stderr.decode()
+    assert "view_only=" not in page
+
+
+def test_password_and_view_only_combine_on_the_same_link(tmp_path):
+    result, page = render(tmp_path, password="s3cret", view_only="1")
+    assert result.returncode == 0, result.stderr.decode()
+    assert "password=s3cret&amp;autoconnect=true&amp;view_only=true" in page
+
+
+FRAGMENT_PORTAL = """<!DOCTYPE html><html><body><ul>
+<li><a href="/novnc/vnc.html#path=websockify&password=demo">mu2eshift</a></li>
+</ul></body></html>
+"""
+
+
+def test_params_merge_into_the_fragment_for_hash_style_links(tmp_path):
+    # Regression for the fragment bug: the portal keeps its settings, the
+    # password included, in the fragment, with no "?" anywhere. Appending to
+    # the whole URL would add "?view_only=true" after the fragment, so noVNC
+    # would read the password as "demo?view_only=true". The params must join
+    # the fragment and leave the password intact. (A fixture with a "?" in it
+    # would hide the bug, since the old code then chose "&".)
+    result, page = render(tmp_path, view_only="1", portal_html=FRAGMENT_PORTAL)
+    assert result.returncode == 0, result.stderr.decode()
+    assert "path=websockify&amp;password=demo&amp;view_only=true" in page
+    assert "password=demo?view_only" not in page  # the old, broken form
+    href = re.search(r'href="([^"]*vnc\.html[^"]*)"', page).group(1)
+    assert "?" not in href  # everything stays in the fragment; no new query
 
 
 def test_shipped_sessions_file_is_well_formed():
